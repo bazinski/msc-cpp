@@ -27,6 +27,7 @@
 #include "AliESDEvent.h"
 #include "AliESDTrack.h"
 #include "AliESDTrdTrack.h"
+#include "AliESDTrdTracklet.h"
 #include "AliESDInputHandler.h"
 #include "AliAnalysisTaskMyTask.h"
 
@@ -67,8 +68,6 @@ AliAnalysisTaskMyTask::~AliAnalysisTaskMyTask()
         delete fOutputList; // at the end of your task, it is deleted from memory by calling this function
     }
 
-    *summary << "]" << endl;
-    summary->close();
     delete summary;
 }
 //_____________________________________________________________________________
@@ -101,6 +100,7 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
                               // fOutputList object. the manager will in the end take care of writing your output to file
                               // so it needs to know what's in the output
 }
+
 //_____________________________________________________________________________
 void AliAnalysisTaskMyTask::UserExec(Option_t *)
 {
@@ -109,58 +109,36 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
 
-    Int_t iTracks(fESD->GetNumberOfTracks()); // see how many tracks there are in the event
+    Int_t nTracks(fESD->GetNumberOfTracks()); // see how many tracks there are in the event
+    Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
     if (fESD->GetNumberOfTrdTracks() > 0)
     {
         *summary << "{\n\t\"Event\": " << fESD->GetEventNumberInFile() << "," 
-                 << "\n\t\"Tracks\": " << fESD->GetNumberOfTracks() << "," 
-                 << "\n\t\"TRD Tracks\": " << fESD->GetNumberOfTrdTracks() << "," 
-                 << "\n\t\"TRD Tracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
+                 << "\n\t\"nTracks\": " << nTracks << "," 
+                 << "\n\t\"nTRDTracks\": " << nTRDTracklets << "," 
+                 << "\n\t\"nTRDTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
 
-        for (Int_t i(0); i < iTracks; i++)
-        {                                                                       // loop over all these tracks
-            AliESDtrack *track = static_cast<AliESDtrack *>(fESD->GetTrack(i)); // get a track (type AliAODTrack) from the event
-            UChar_t numClusters = track->GetTRDncls();
-            UChar_t numTracklets = track->GetTRDntracklets();
-            if (numTracklets > 0 || numClusters > 0)
-            {
-                *summary << "Track: " << track->GetID()
-                         //<< " Track World: " << track->GetTrackWord(0)
-                         << " Clusters: " << (Int_t)numClusters
-                         << " Tracklets: " << (Int_t)numTracklets
-                         << endl;
-
-                if (numTracklets > 0)
-                {
-                    Int_t *tracklets = new Int_t[numTracklets * 2];
-                    for (Int_t i = 0; i < numTracklets*2; i++)
-                        tracklets[i] = 0;
-                    *summary << "Tracklet IDs [";
-                    *summary << (Int_t)track->GetTRDtracklets(tracklets) << "] : ";
-                    for (Int_t i = 0; i < numTracklets*2; i++)
-                        *summary << tracklets[i] << " ";
-                    *summary << endl;
-                    delete[] tracklets;
-                }
-
-                // if (numClusters > 0)
-                // {
-                //     Int_t *clusters = new Int_t[numClusters * 2];
-                //     track->GetTRDclusters(clusters);
-                //     *summary << "Cluster IDs: ";
-                //     // for (Int_t i = 0; i < numClusters; i++)
-                //     //     *summary << clusters[i] << " ";
-                //     *summary << endl;
-                //     delete[] clusters;
-                // }
+        if (nTRDTracklets > 0) {
+            *summary << "\t\"TRDTracklets\": [" << endl;
+            for (Int_t trdtrackletindex = 0; trdtrackletindex < nTRDTracklets; trdtrackletindex++) {
+                AliESDTrdTracklet * tracklet = fESD->GetTrdTracklet(trdtrackletindex);
+                *summary << "\t\t{" << endl;
+                *summary << "\t\t\t\"HCId\": " << tracklet->GetHCId() << "," << endl;
+                *summary << "\t\t\t\"Label\": " << tracklet->GetLabel() << "," << endl;
+                *summary << "\t\t\t\"TrackletWord\": " << tracklet->GetTrackletWord() << "," << endl;                
+                *summary << "\t\t\t\"BinDy\": " << tracklet->GetBinDy() << "," << endl;
+                *summary << "\t\t\t\"BinY\": " << tracklet->GetBinY() << "," << endl;
+                *summary << "\t\t\t\"BinZ\": " << tracklet->GetBinZ() << "," << endl;
+                *summary << "\t\t\t\"Detector\": " << tracklet->GetDetector() << "," << endl;
+                *summary << "\t\t\t\"DyDx\": " << tracklet->GetDyDx() << "," << endl;
+                *summary << "\t\t\t\"LocalY\": " << tracklet->GetLocalY() << "," << endl;
+                *summary << "\t\t\t\"PID\": " << tracklet->GetPID() << "," << endl;
+                *summary << "\t\t}," << endl;
             }
-            //cout << track->GetTrackWord(0) << endl;
-            //break;
-            // if(!track || !track->TestFilterBit(1)) continue;                            // if we failed, skip this track
-            // fHistPt->Fill(track->Pt());                     // plot the pt value of the track in a histogram
-        } // continue until all the tracks are processed
-
+            *summary << "\t]," << endl;
+        }
+        
         *summary << "}," << endl;
     }
 
@@ -173,5 +151,7 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
 {
     // terminate
     // called at the END of the analysis (when all events are processed)
+    *summary << "]" << endl;
+    summary->close();    
 }
 //_____________________________________________________________________________
