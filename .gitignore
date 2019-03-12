@@ -5,3 +5,5 @@
 *.root
 *.xml
 *.pcm
+.vscode
+*.txt

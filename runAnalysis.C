@@ -3,6 +3,7 @@
 // specify includes for those. for your own task however, you (probably) have not generated a
 // pcm file, so we need to include it explicitly
 #include "AliAnalysisTaskMyTask.h"
+#include "AliAnalysisManager.h"
 
 void runAnalysis()
 {
@@ -22,8 +23,8 @@ void runAnalysis()
      
     // create the analysis manager
     AliAnalysisManager *mgr = new AliAnalysisManager("AnalysisTaskExample");
-    AliAODInputHandler *aodH = new AliAODInputHandler();
-    mgr->SetInputEventHandler(aodH);
+    AliESDInputHandler *esdH = new AliESDInputHandler();
+    mgr->SetInputEventHandler(esdH);
 
 
 
@@ -47,11 +48,12 @@ void runAnalysis()
 
     if(local) {
         // if you want to run locally, we need to define some input
-        TChain* chain = new TChain("aodTree");
+        TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
-        chain->Add("AliAOD.root");
+        chain->Add("~/alidata/000294925/18000294925036.100/AliESDs.root");
+        //chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
         // start the analysis locally, reading the events from the tchain
-        mgr->StartAnalysis("local", chain);
+        mgr->StartAnalysis("local", chain, 10);
     } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();

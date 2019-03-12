@@ -6,6 +6,9 @@
 #define AliAnalysisTaskMyTask_H
 
 #include "AliAnalysisTaskSE.h"
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 class AliAnalysisTaskMyTask : public AliAnalysisTaskSE  
 {
@@ -19,9 +22,10 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         virtual void            Terminate(Option_t* option);
 
     private:
-        AliAODEvent*            fAOD;           //! input event
+        AliESDEvent*            fESD;           //! input event
         TList*                  fOutputList;    //! output list
         TH1F*                   fHistPt;        //! dummy histogram
+        ofstream*               summary;        // summary output text file
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
