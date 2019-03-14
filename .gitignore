@@ -6,4 +6,5 @@
 *.xml
 *.pcm
 .vscode
-*.txt
+*.json
+

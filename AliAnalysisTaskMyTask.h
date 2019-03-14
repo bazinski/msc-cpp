@@ -21,11 +21,18 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         virtual void            UserExec(Option_t* option);
         virtual void            Terminate(Option_t* option);
 
+        void                    PrintTrdTracklets(AliESDEvent * fESD);
+        void                    PrintTrdTracklet(AliESDTrdTracklet * fESDtracklet, Int_t id);
+        void                    PrintTrdTracks(AliESDEvent * fESD);
+        void                    PrintTracks(AliESDEvent * fESD);
+        void                    PrintTrack(AliVTrack* vTrack);
+
     private:
         AliESDEvent*            fESD;           //! input event
         TList*                  fOutputList;    //! output list
         TH1F*                   fHistPt;        //! dummy histogram
-        ofstream*               summary;        // summary output text file
+        ofstream*               summary;        //! summary output text file
+        bool                    firstEvent;     //! indicator for output comma appends
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
