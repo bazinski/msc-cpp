@@ -41,14 +41,14 @@ using namespace std; // std namespace: so you can do things like 'cout'
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
     AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
-                                                     fESD(0), fOutputList(0), fHistPt(0), summary(0), firstEvent(true)
+                                                     fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
-                                                                 fESD(0), fOutputList(0), fHistPt(0), summary(0), firstEvent(true)
+                                                                 fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -189,6 +189,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
 void AliAnalysisTaskMyTask::PrintTrack(AliVTrack *vTrack)
 {
     *summary << "\t\t{" << endl;
+    *summary << "\t\t\t\"Ref\": \"" << vTrack << "\"" << endl;
     //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
     //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
     //*summary << "\t\t\tGetTrackletIndex\": " << track->GetTrackletIndex() << endl;
@@ -238,11 +239,11 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     if (fESD->GetNumberOfTrdTracks() > 0)
     {
-        if (firstEvent)
-            firstEvent = false;
-        else
+        if (eventCount++ > 2)
         {
             return;
+        }
+        else if (eventCount > 1) {
             *summary << "," << endl;
         }
 

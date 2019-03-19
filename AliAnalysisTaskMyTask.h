@@ -32,7 +32,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         TList*                  fOutputList;    //! output list
         TH1F*                   fHistPt;        //! dummy histogram
         ofstream*               summary;        //! summary output text file
-        bool                    firstEvent;     //! indicator for output comma appends
+        int                     eventCount;     //! indicator for output comma appends
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
