@@ -78,9 +78,6 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     // this function is called ONCE at the start of your analysis (RUNTIME)
     // here you ceate the histograms that you want to use
     //
-    // the histograms are in this case added to a tlist, this list is in the end saved
-    // to an output file
-    //
     fOutputList = new TList();    // this is a list which will contain all of your histograms
                                   // at the end of the analysis, the contents of this list are written
                                   // to the output file
@@ -88,13 +85,8 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
                                   // if requested (dont worry about this now)
 
     summary = new ofstream();
-    summary->open("output.json");
-    *summary << "[";
-
-    // example of a histogram
-    // fHistPt = new TH1F("fHistPt", "fHistPt", 100, 0, 10);       // create your histogra
-    // fOutputList->Add(fHistPt);          // don't forget to add it to the list! the list will be written to file, so if you want
-    // your histogram in the output file, add it to the list!
+    summary->open("/mnt/jsroot/data.js");
+    *summary << "function getData() {\n\treturn [";
 
     PostData(1, fOutputList); // postdata will notify the analysis manager of changes / updates to the
                               // fOutputList object. the manager will in the end take care of writing your output to file
@@ -123,7 +115,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklets(AliESDEvent *fESD)
 {
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
-    *summary << "\t\"TRDTracklets\": [" << endl;
+    *summary << "\t\"TrdTracklets\": [" << endl;
     for (Int_t idx = 0; idx < nTRDTracklets; idx++)
     {
         AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
@@ -137,7 +129,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
 {
     Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
 
-    *summary << "\t\"TRDTracks\": [" << endl;
+    *summary << "\t\"TrdTracks\": [" << endl;
     for (Int_t idx = 0; idx < nTRDTracks; idx++)
     {
         AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
@@ -145,6 +137,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
         //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
         //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
         *summary << "\t\t\t\"Id\": " << idx << "," << endl;
+        *summary << "\t\t\t\"Ref\": \"" << track << "\"," << endl;
         *summary << "\t\t\t\"A\": " << track->GetA() << "," << endl;
         *summary << "\t\t\t\"B\": " << track->GetB() << "," << endl;
         *summary << "\t\t\t\"C\": " << track->GetC() << "," << endl;
@@ -249,9 +242,10 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
         *summary << "{"
                  << "\n\t\"Event\": " << fESD->GetEventNumberInFile() << ","
+                 << "\n\t\"Ref\": \"" << eventCount << "\","
                  << "\n\t\"nTracks\": " << fESD->GetNumberOfTracks() << ","
-                 << "\n\t\"nTRDTracks\": " << fESD->GetNumberOfTrdTracks() << ","
-                 << "\n\t\"nTRDTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
+                 << "\n\t\"nTrdTracks\": " << fESD->GetNumberOfTrdTracks() << ","
+                 << "\n\t\"nTrdTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
 
         this->PrintTrdTracks(fESD);
         this->PrintTrdTracklets(fESD);
@@ -268,7 +262,7 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
 {
     // terminate
     // called at the END of the analysis (when all events are processed)
-    *summary << "]" << endl;
+    *summary << "];\n}" << endl;
     summary->close();
 }
 //_____________________________________________________________________________
