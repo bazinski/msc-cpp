@@ -25,7 +25,8 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintTrdTracklet(AliESDTrdTracklet * fESDtracklet, Int_t id);
         void                    PrintTrdTracks(AliESDEvent * fESD);
         void                    PrintTracks(AliESDEvent * fESD);
-        void                    PrintTrack(AliVTrack* vTrack);
+        void                    PrintTrack(AliESDtrack* track);
+        void                    PrintTrackXYZ(Double_t * xyz);
 
     private:
         AliESDEvent*            fESD;           //! input event

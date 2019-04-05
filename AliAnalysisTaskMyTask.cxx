@@ -156,7 +156,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
         if (trackMatch != nullptr)
         {
             *summary << "\t\t\t\"TrackMatch\": ";
-            PrintTrack(trackMatch);
+            PrintTrack((AliESDtrack *)trackMatch);
             *summary << "," << endl;
         }
 
@@ -179,14 +179,31 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
     *summary << "\t]," << endl;
 }
 
-void AliAnalysisTaskMyTask::PrintTrack(AliVTrack *vTrack)
+void AliAnalysisTaskMyTask::PrintTrackXYZ(Double_t * xyz) {
+    *summary << "\t\t\t\t[" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << "]," << endl;
+}
+
+void AliAnalysisTaskMyTask::PrintTrack(AliESDtrack *track)
 {
     *summary << "\t\t{" << endl;
-    *summary << "\t\t\t\"Ref\": \"" << vTrack << "\"" << endl;
+    *summary << "\t\t\t\t\"Ref\": \"" << track << "\"," << endl;
+
+    *summary << "\t\t\t\t\"Path\": [" << endl;
+    
+    Double_t b = track->GetESDEvent()->GetMagneticField();
+
+    Double_t * xyz = new Double_t[3];
+    for (Int_t x = 1; x <= 470; x+=10)
+        if (track->GetXYZAt(x, b, xyz))
+            PrintTrackXYZ(xyz);
+    delete [] xyz;
+
+    *summary << "\t\t\t\t]," << endl;
+
     //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
     //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
     //*summary << "\t\t\tGetTrackletIndex\": " << track->GetTrackletIndex() << endl;
-    *summary << "\t\t}";
+    *summary << "\t\t\t}";
 }
 
 void AliAnalysisTaskMyTask::PrintTracks(AliESDEvent *fESD)
@@ -223,7 +240,8 @@ void AliAnalysisTaskMyTask::PrintTracks(AliESDEvent *fESD)
 void AliAnalysisTaskMyTask::UserExec(Option_t *)
 {
     fESD = dynamic_cast<AliESDEvent *>(InputEvent());
-
+    const AliESDVertex * primaryVertex = fESD->GetPrimaryVertex();
+    
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
 
@@ -232,25 +250,31 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     if (fESD->GetNumberOfTrdTracks() > 0)
     {
-        if (eventCount++ > 2)
+        //cout << primaryVertex->GetX() << endl;
+        if (eventCount++ > 20)
         {
             return;
         }
-        else if (eventCount > 1) {
-            *summary << "," << endl;
+        else {
+            if (eventCount > 1) {
+                *summary << "," << endl;
+            }
+
+            // *summary << "{ \"x\": " << primaryVertex->GetX() << "}";            
+            // return;
+
+            *summary << "{"
+                    << "\n\t\"Event\": " << fESD->GetEventNumberInFile() << ","
+                    << "\n\t\"Ref\": \"" << eventCount << "\","
+                    << "\n\t\"nTracks\": " << fESD->GetNumberOfTracks() << ","
+                    << "\n\t\"nTrdTracks\": " << fESD->GetNumberOfTrdTracks() << ","
+                    << "\n\t\"nTrdTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
+
+            this->PrintTrdTracks(fESD);
+            this->PrintTrdTracklets(fESD);
+
+            *summary << "}";            
         }
-
-        *summary << "{"
-                 << "\n\t\"Event\": " << fESD->GetEventNumberInFile() << ","
-                 << "\n\t\"Ref\": \"" << eventCount << "\","
-                 << "\n\t\"nTracks\": " << fESD->GetNumberOfTracks() << ","
-                 << "\n\t\"nTrdTracks\": " << fESD->GetNumberOfTrdTracks() << ","
-                 << "\n\t\"nTrdTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
-
-        this->PrintTrdTracks(fESD);
-        this->PrintTrdTracklets(fESD);
-
-        *summary << "}";
     }
 
     PostData(1, fOutputList); // stream the results the analysis of this event to
