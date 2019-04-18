@@ -41,14 +41,14 @@ using namespace std; // std namespace: so you can do things like 'cout'
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
     AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
-                                                     fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0)
+                                                     fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0), minY(0), maxY(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
-                                                                 fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0)
+                                                                 fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0), minY(0), maxY(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -84,6 +84,10 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     fOutputList->SetOwner(kTRUE); // memory stuff: the list is owner of all objects it contains and will delete them
                                   // if requested (dont worry about this now)
 
+    fHistPt = new TH1F("fHistPt", "fHistPt", 100, -90, 90);       // create your histogra
+    fOutputList->Add(fHistPt);          // don't forget to add it to the list! the list will be written to file, so if you want
+                                        // your histogram in the output file, add it to the list!
+                                        
     summary = new ofstream();
     summary->open("/mnt/jsroot/data.js");
     *summary << "function getData() {\n\treturn [";
@@ -108,7 +112,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, Int_t 
     *summary << "\t\t\t\"DyDx\": " << tracklet->GetDyDx() << "," << endl;
     *summary << "\t\t\t\"LocalY\": " << tracklet->GetLocalY() << "," << endl;
     *summary << "\t\t\t\"PID\": " << tracklet->GetPID() << endl;
-    *summary << "\t\t}";
+    *summary << "\t\t}";    
 }
 
 void AliAnalysisTaskMyTask::PrintTrdTracklets(AliESDEvent *fESD)
@@ -251,9 +255,20 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     if (fESD->GetNumberOfTrdTracks() > 0)
     {
         //cout << primaryVertex->GetX() << endl;
-        if (eventCount++ > 20)
+        if (eventCount++ > 5)
         {
-            return;
+            Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
+
+            for (Int_t idx = 0; idx < nTRDTracklets; idx++)
+            {    
+                AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
+                Double_t localY = tracklet->GetLocalY();
+                fHistPt->Fill(localY);
+
+                minY = min(minY, localY);
+                maxY = max(maxY, localY);
+            }
+            //return;
         }
         else {
             if (eventCount > 1) {
@@ -288,5 +303,7 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
     // called at the END of the analysis (when all events are processed)
     *summary << "];\n}" << endl;
     summary->close();
+
+    cout << endl << endl << "Range: " << minY << " " << maxY << endl;
 }
 //_____________________________________________________________________________

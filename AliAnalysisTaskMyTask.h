@@ -34,6 +34,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         TH1F*                   fHistPt;        //! dummy histogram
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
+        Double_t                minY, maxY;
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
