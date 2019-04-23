@@ -41,14 +41,18 @@ using namespace std; // std namespace: so you can do things like 'cout'
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
     AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
-                                                     fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0), minY(0), maxY(0)
+                                                     fESD(0), fOutputList(0), fHistPt(0), 
+                                                     summary(0), eventCount(0), minY(0), maxY(0),
+                                                     fTracklet(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
-                                                                 fESD(0), fOutputList(0), fHistPt(0), summary(0), eventCount(0), minY(0), maxY(0)
+                                                                 fESD(0), fOutputList(0), fHistPt(0), 
+                                                                 summary(0), eventCount(0), minY(0), maxY(0),
+                                                                 fTracklet(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -84,9 +88,12 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     fOutputList->SetOwner(kTRUE); // memory stuff: the list is owner of all objects it contains and will delete them
                                   // if requested (dont worry about this now)
 
-    fHistPt = new TH1F("fHistPt", "fHistPt", 100, -90, 90);       // create your histogra
+    fHistPt = new TH2F("fHistPt", "fHistPt", 100, -90, 90, 6, 0, 6);       // create your histogra
     fOutputList->Add(fHistPt);          // don't forget to add it to the list! the list will be written to file, so if you want
                                         // your histogram in the output file, add it to the list!
+
+    fTracklet = new TNtuple("fTracklet", "fTracklet", "x:y:z:ly");
+    fOutputList->Add(fTracklet);
                                         
     summary = new ofstream();
     summary->open("/mnt/jsroot/data.js");
@@ -263,7 +270,12 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
             {    
                 AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
                 Double_t localY = tracklet->GetLocalY();
-                fHistPt->Fill(localY);
+                Int_t layer = tracklet->GetDetector() % 6;
+                fHistPt->Fill(localY, layer);
+                
+                Int_t biny = tracklet->GetBinY();
+                Int_t binz = tracklet->GetBinZ();
+                fTracklet->Fill(layer, biny, binz, localY);
 
                 minY = min(minY, localY);
                 maxY = max(maxY, localY);

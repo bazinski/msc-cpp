@@ -9,6 +9,9 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
+#include "TH3.h"
+#include "TTree.h"
+#include "TNtuple.h"
 
 class AliAnalysisTaskMyTask : public AliAnalysisTaskSE  
 {
@@ -31,7 +34,8 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
     private:
         AliESDEvent*            fESD;           //! input event
         TList*                  fOutputList;    //! output list
-        TH1F*                   fHistPt;        //! dummy histogram
+        TH2F*                   fHistPt;        //! dummy histogram
+        TNtuple*                fTracklet;        //! dummy histogram
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
