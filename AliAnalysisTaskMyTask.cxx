@@ -43,7 +43,7 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
     AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
                                                      fESD(0), fOutputList(0), fHistPt(0), 
                                                      summary(0), eventCount(0), minY(0), maxY(0),
-                                                     fTracklet(0)
+                                                     fTracklet(0), mp(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
@@ -52,7 +52,7 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
                                                                  fESD(0), fOutputList(0), fHistPt(0), 
                                                                  summary(0), eventCount(0), minY(0), maxY(0),
-                                                                 fTracklet(0)
+                                                                 fTracklet(0), mp(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -108,6 +108,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, Int_t 
 {
     *summary << "\t\t{" << endl;
     *summary << "\t\t\t\"Id\": " << id << "," << endl;
+    *summary << "\t\t\t\"id\": " << mp->at(tracklet) << "," << endl;
     *summary << "\t\t\t\"Ref\": \"" << tracklet << "\"," << endl;
     *summary << "\t\t\t\"HCId\": " << tracklet->GetHCId() << "," << endl;
     *summary << "\t\t\t\"Label\": " << tracklet->GetLabel() << "," << endl;
@@ -126,7 +127,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklets(AliESDEvent *fESD)
 {
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
-    *summary << "\t\"TrdTracklets\": [" << endl;
+    *summary << "\t\"TrdTracklets\": [";
     for (Int_t idx = 0; idx < nTRDTracklets; idx++)
     {
         AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
@@ -145,23 +146,24 @@ void AliAnalysisTaskMyTask::PrintTrdTracks(AliESDEvent *fESD)
     {
         AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
         *summary << "\t\t{" << endl;
-        //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
-        //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
+        *summary << "\t\t\t\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;        
         *summary << "\t\t\t\"Id\": " << idx << "," << endl;
-        *summary << "\t\t\t\"Ref\": \"" << track << "\"," << endl;
         *summary << "\t\t\t\"A\": " << track->GetA() << "," << endl;
         *summary << "\t\t\t\"B\": " << track->GetB() << "," << endl;
         *summary << "\t\t\t\"C\": " << track->GetC() << "," << endl;
         *summary << "\t\t\t\"Y\": " << track->GetY() << "," << endl;
-        *summary << "\t\t\t\"LayerMask\": " << track->GetLayerMask() << "," << endl;
         *summary << "\t\t\t\"PID\": " << track->GetPID() << "," << endl;
         *summary << "\t\t\t\"Pt\": " << track->GetPt() << "," << endl;
         *summary << "\t\t\t\"Stack\": " << track->GetStack() << "," << endl;
         *summary << "\t\t\t\"Sector\": " << track->GetSector() << "," << endl;
-        *summary << "\t\t\t\"Flags\": " << (Int_t)track->GetFlags() << "," << endl;
-        *summary << "\t\t\t\"FlagsTiming\": " << (Int_t)track->GetFlagsTiming() << "," << endl;
-        *summary << "\t\t\t\"TrackInTime\": " << track->GetTrackInTime() << "," << endl;
-        *summary << "\t\t\t\"Label\": " << track->GetLabel() << "," << endl;
+        //*summary << "\t\t\t\"LayerMask\": " << track->GetLayerMask() << "," << endl;
+        //*summary << "\t\t\t\"Ref\": \"" << track << "\"," << endl;
+        //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
+        //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
+        //*summary << "\t\t\t\"Flags\": " << (Int_t)track->GetFlags() << "," << endl;
+        // *summary << "\t\t\t\"FlagsTiming\": " << (Int_t)track->GetFlagsTiming() << "," << endl;
+        // *summary << "\t\t\t\"TrackInTime\": " << track->GetTrackInTime() << "," << endl;
+        // *summary << "\t\t\t\"Label\": " << track->GetLabel() << "," << endl;
         
         AliVTrack *trackMatch = track->GetTrackMatch();
         if (trackMatch != nullptr)
@@ -229,19 +231,20 @@ void AliAnalysisTaskMyTask::PrintTracks(AliESDEvent *fESD)
         //*summary << "\t\t\tGetTrackWord\": " << track->GetTrackWord() << endl;
         //*summary << "\t\t\tGetExtendedTrackWord\": " << track->GetExtendedTrackWord() << endl;
         *summary << "\t\t\t\"Id\": " << idx << "," << endl;
+        *summary << "\t\t\t\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
         *summary << "\t\t\t\"A\": " << track->GetA() << "," << endl;
         *summary << "\t\t\t\"B\": " << track->GetB() << "," << endl;
         *summary << "\t\t\t\"C\": " << track->GetC() << "," << endl;
         *summary << "\t\t\t\"Y\": " << track->GetY() << "," << endl;
-        *summary << "\t\t\t\"LayerMask\": " << track->GetLayerMask() << "," << endl;
+        //*summary << "\t\t\t\"LayerMask\": " << track->GetLayerMask() << "," << endl;
         *summary << "\t\t\t\"PID\": " << track->GetPID() << "," << endl;
         *summary << "\t\t\t\"Pt\": " << track->GetPt() << "," << endl;
         *summary << "\t\t\t\"Stack\": " << track->GetStack() << "," << endl;
         *summary << "\t\t\t\"Sector\": " << track->GetSector() << "," << endl;
-        *summary << "\t\t\t\"Flags\": " << (Int_t)track->GetFlags() << "," << endl;
-        *summary << "\t\t\t\"FlagsTiming\": " << (Int_t)track->GetFlagsTiming() << "," << endl;
-        *summary << "\t\t\t\"TrackInTime\": " << track->GetTrackInTime() << "," << endl;
-        *summary << "\t\t\t\"Label\": " << track->GetLabel() << endl;
+        //*summary << "\t\t\t\"Flags\": " << (Int_t)track->GetFlags() << "," << endl;
+        //*summary << "\t\t\t\"FlagsTiming\": " << (Int_t)track->GetFlagsTiming() << "," << endl;
+        //*summary << "\t\t\t\"TrackInTime\": " << track->GetTrackInTime() << "," << endl;
+        //*summary << "\t\t\t\"Label\": " << track->GetLabel() << endl;
         //*summary << "\t\t\tGetTrackletIndex\": " << track->GetTrackletIndex() << endl;
         *summary << "\t\t}" << (idx + 1 == nTRDTracks ? "" : ",") << endl;
     }
@@ -257,13 +260,21 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
         return; // if the pointer to the event is empty (getting it failed) skip this event
 
     Int_t nTracks(fESD->GetNumberOfTracks()); // see how many tracks there are in the event
+    Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
     if (fESD->GetNumberOfTrdTracks() > 0)
     {
+        for (Int_t idx = 0; idx < nTRDTracks; idx++)
+        {    
+            AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
+            if (track->GetSector() != 4) return;
+        }
+
         //cout << primaryVertex->GetX() << endl;
         if (eventCount++ > 5)
         {
+            return;
             Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
             for (Int_t idx = 0; idx < nTRDTracklets; idx++)
@@ -292,13 +303,25 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
             *summary << "{"
                     << "\n\t\"Event\": " << fESD->GetEventNumberInFile() << ","
-                    << "\n\t\"Ref\": \"" << eventCount << "\","
+                    << "\n\t\"id\": \"E" << eventCount << "\","
                     << "\n\t\"nTracks\": " << fESD->GetNumberOfTracks() << ","
                     << "\n\t\"nTrdTracks\": " << fESD->GetNumberOfTrdTracks() << ","
                     << "\n\t\"nTrdTracklets\": " << fESD->GetNumberOfTrdTracklets() << "," << endl;
 
+            Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
+
+            mp = new map<AliESDTrdTracklet *, Int_t>;
+
+            for (Int_t idx = 0; idx < nTRDTracklets; idx++)
+            {    
+                AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
+                mp->insert({tracklet, idx});
+            }
+
             this->PrintTrdTracks(fESD);
             this->PrintTrdTracklets(fESD);
+
+            delete mp;
 
             *summary << "}";            
         }

@@ -39,6 +39,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
+        map<AliESDTrdTracklet *, Int_t> * mp;
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
