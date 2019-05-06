@@ -51,7 +51,7 @@ void runAnalysis()
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
         chain->Add("~/alidata/000294925/18000294925036.100/AliESDs.root");
-        chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
+        // chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
         // start the analysis locally, reading the events from the tchain
         mgr->StartAnalysis("local", chain);
     } else {

@@ -1,3 +1,3 @@
-# Example analysis task
+# AliESD to Javascript converter
 
-Click [here](https://alice-doc.github.io/alice-analysis-tutorial/) to find out how to build our software, read up on additional material and to find exercises that go along with this package. 
+A simple AliAnalysis task that converts AliESD ROOT files to Javascript JSON for use in visualisations.
