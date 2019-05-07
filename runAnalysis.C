@@ -53,7 +53,7 @@ void runAnalysis()
         chain->Add("~/alidata/000294925/18000294925036.100/AliESDs.root");
         // chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
         // start the analysis locally, reading the events from the tchain
-        mgr->StartAnalysis("local", chain);
+        mgr->StartAnalysis("local", chain, 100);
     } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();

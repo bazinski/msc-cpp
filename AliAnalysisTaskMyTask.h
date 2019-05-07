@@ -13,6 +13,8 @@ using namespace std;
 #include "TTree.h"
 #include "TNtuple.h"
 
+const std::string TAB("\t");
+
 class AliAnalysisTaskMyTask : public AliAnalysisTaskSE  
 {
     public:
@@ -24,12 +26,11 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         virtual void            UserExec(Option_t* option);
         virtual void            Terminate(Option_t* option);
 
-        void                    PrintTrdTracklets(AliESDEvent * fESD);
-        void                    PrintTrdTracklet(AliESDTrdTracklet * fESDtracklet, Int_t id);
-        void                    PrintTrdTracks(AliESDEvent * fESD);
+        void                    PrintTrdTrackletArray(AliESDEvent * fESD, std::string indent);
+        void                    PrintTrdTracklet(AliESDTrdTracklet * fESDtracklet, std::string indent);
+        void                    PrintTrdTrackArray(AliESDEvent * fESD, std::string indent);
         void                    PrintTracks(AliESDEvent * fESD);
-        void                    PrintTrack(AliESDtrack* track);
-        void                    PrintTrackXYZ(Double_t * xyz);
+        void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
     private:
         AliESDEvent*            fESD;           //! input event
