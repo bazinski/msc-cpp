@@ -13,7 +13,7 @@ using namespace std;
 #include "TTree.h"
 #include "TNtuple.h"
 
-const std::string TAB("\t");
+const std::string TAB(" ");
 
 class AliAnalysisTaskMyTask : public AliAnalysisTaskSE  
 {

@@ -42,8 +42,8 @@ void runAnalysis()
 
 
     if(!mgr->InitAnalysis()) return;
-    mgr->SetDebugLevel(2);
-    mgr->PrintStatus();
+    mgr->SetDebugLevel(3);
+    //mgr->PrintStatus();
     mgr->SetUseProgressBar(1, 25);
 
     if(local) {
@@ -51,6 +51,10 @@ void runAnalysis()
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
         chain->Add("~/alidata/000294925/18000294925036.100/AliESDs.root");
+        // TChain * esdFriendTree = new TChain("esdFriendTree");
+        // esdFriendTree->Add("~/alidata/000294925/18000294925036.100/AliESDfriends.root");
+
+        //chain->AddFriend(esdFriendTree);
         // chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
         // start the analysis locally, reading the events from the tchain
         mgr->StartAnalysis("local", chain, 100);

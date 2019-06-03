@@ -99,7 +99,7 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
                                         
     summary = new ofstream();
     summary->open("/mnt/jsroot/data.min.js");
-    *summary << "function getData() {\n\treturn [";
+    *summary << "function getData() {\n" + TAB + "return [";
 
     PostData(1, fOutputList); // postdata will notify the analysis manager of changes / updates to the
                               // fOutputList object. the manager will in the end take care of writing your output to file
@@ -192,6 +192,9 @@ void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent
     
     Double_t b = track->GetESDEvent()->GetMagneticField();
 
+    // AliESDfriendTrack *f = (AliESDfriendTrack*)track->GetFriendTrack();
+    // cout << f->GetMaxTRDcluster() << endl;
+    
     Double_t * xyz = new Double_t[3];
     for (Int_t x = 1; x <= 470; x+=10)
         if (track->GetXYZAt(x, b, xyz))
@@ -208,6 +211,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 {
     fESD = dynamic_cast<AliESDEvent *>(InputEvent());
     const AliESDVertex * primaryVertex = fESD->GetPrimaryVertex();
+    const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
     
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
@@ -233,6 +237,8 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
             if (eventCount > 1) 
                 *summary << "," << endl;
             else *summary << endl;
+
+            cout << esdFriend->GetSize() << endl;
 
             std::string indent = TAB + TAB;
 
@@ -274,7 +280,5 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
     *summary << TAB << "];" << endl 
             << "}" << endl;
     summary->close();
-
-    cout << endl << endl << "Range: " << minY << " " << maxY << endl;
 }
 //_____________________________________________________________________________
