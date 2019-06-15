@@ -19,6 +19,18 @@
  * as an example, one histogram is filled
  */
 
+#include "TFile.h"
+#include "TH3.h"
+#include "TTree.h"
+#include "TNtuple.h"
+
+#include "AliTRDdigitsManager.h"
+#include "AliTRDgeometry.h"
+
+#include "AliAnalysisTaskSE.h"
+
+#include "TSystem.h"
+#include "TFile.h"
 #include "TChain.h"
 #include "TH1F.h"
 #include "TList.h"
@@ -29,23 +41,25 @@
 #include "AliESDTrdTrack.h"
 #include "AliESDTrdTracklet.h"
 #include "AliESDInputHandler.h"
-#include "AliAnalysisTaskMyTask.h"
 
 #include <iostream>
 #include <math.h>
 #include "AliTRDgeometry.h"
-using namespace std;
+
+#include "AliAnalysisTaskMyTask.h"
+
+#include <iostream>
+#include <fstream>
+using namespace std; // std namespace: so you can do things like 'cout'
 
 class AliAnalysisTaskMyTask; // your analysis class
 
-using namespace std; // std namespace: so you can do things like 'cout'
-
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
-    AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
+AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
                                                      fESD(0), fOutputList(0), fHistPt(0), 
                                                      summary(0), eventCount(0), minY(0), maxY(0),
-                                                     fTracklet(0), mp(0)
+                                                     fTracklet(0), mp(0), fDigMan(0), fGeo(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
@@ -54,7 +68,7 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
                                                                  fESD(0), fOutputList(0), fHistPt(0), 
                                                                  summary(0), eventCount(0), minY(0), maxY(0),
-                                                                 fTracklet(0), mp(0)
+                                                                 fTracklet(0), mp(0), fDigMan(0), fGeo(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -64,6 +78,16 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTask
                                      // you can add more output objects by calling DefineOutput(2, classname::Class())
                                      // if you add more output objects, make sure to call PostData for all of them, and to
                                      // make changes to your AddTask macro!
+
+    // create the digits manager
+    fDigMan = new AliTRDdigitsManager;
+    fDigMan->CreateArrays();
+
+    // the geometry could be created in the constructor or similar
+    fGeo = new AliTRDgeometry;
+    if (! fGeo) {
+        AliFatal("cannot create geometry ");
+    }
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::~AliAnalysisTaskMyTask()
@@ -204,6 +228,32 @@ void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent
     *summary << indent + TAB << "]," << endl;
 
     *summary << indent << "}";
+}
+
+//_____________________________________________________________________________
+TFile* AliAnalysisTaskMyTask::OpenDigitsFile(TString inputfile,
+					   TString digfile,
+					   TString opt)
+{
+  // we should check if we are reading ESDs or AODs - for now, only
+  // ESDs are supported
+
+  if (digfile == "") {
+    return NULL;
+  }
+
+  // construct the name of the digits file from the input file
+  inputfile.ReplaceAll("AliESDs.root", digfile);
+
+  // open the file
+  AliInfo( "opening digits file " + inputfile
+	   + " with option \"" + opt + "\"");
+  TFile* dfile = new TFile(inputfile, opt);
+  if (!dfile) {
+    AliWarning("digits file '" + inputfile + "' cannot be opened");
+  }
+
+  return dfile;
 }
 
 //_____________________________________________________________________________

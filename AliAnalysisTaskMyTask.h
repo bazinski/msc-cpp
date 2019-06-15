@@ -5,14 +5,6 @@
 #ifndef AliAnalysisTaskMyTask_H
 #define AliAnalysisTaskMyTask_H
 
-#include "AliAnalysisTaskSE.h"
-#include <iostream>
-#include <fstream>
-using namespace std;
-#include "TH3.h"
-#include "TTree.h"
-#include "TNtuple.h"
-
 const std::string TAB(" ");
 
 class AliAnalysisTaskMyTask : public AliAnalysisTaskSE  
@@ -41,6 +33,11 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
         map<AliESDTrdTracklet *, Int_t> * mp;
+
+        AliTRDdigitsManager* fDigMan; //! digits manager
+        AliTRDgeometry* fGeo; //! TRD geometry
+
+        TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented
