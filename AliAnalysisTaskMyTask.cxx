@@ -289,7 +289,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     const AliESDVertex * primaryVertex = fESD->GetPrimaryVertex();
     //const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
 
-    fEventNoInFile++;
+    fEventNoInFile = fESD->GetEventNumberInFile();
     
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
@@ -386,14 +386,15 @@ void AliAnalysisTaskMyTask::ReadDigits()
   for (Int_t det=0; det<540; det++) {
     if (fDigMan->GetDigits(det)) {
         //cout << "Creating file: " << Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det) << endl;
+        Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det), std::ofstream::out | std::ofstream::trunc);
+        ofstream dout(Form("/mnt/jsroot/data/%d.%d.%d.%d.json", fEventNoInFile, sector, stack, layer), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
              << "\t\"det\": " << det << ",\n"
-             << "\t\"sector\": " << fGeo->GetSector(det) << ",\n"
-             << "\t\"stack\": " << fGeo->GetStack(det) << ",\n"
-             << "\t\"layer\": " << fGeo->GetLayer(det) << ",\n"
-             << "\t\"rows\": [\n";
+             << "\t\"sector\": " << sector << ",\n"
+             << "\t\"stack\": " << stack << ",\n"
+             << "\t\"layer\": " << layer << ",\n"
+             << "\t\"pads\": [\n";
 
         AliTRDarrayADC * adcArray = fDigMan->GetDigits(det);
         adcArray->Expand();
@@ -401,14 +402,11 @@ void AliAnalysisTaskMyTask::ReadDigits()
         Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
 
         for (Int_t r = 0; r < nrow; r++) {
-            dout << "\t\t{\n"
-                 << "\t\t\t\"row\": " << r << ",\n"
-                 << "\t\t\t\"cols\": [\n";
-
             for (Int_t c = 0; c < ncol; c++) {
-                dout << "\t\t\t\t{\n"
-                     << "\t\t\t\t\t\"col\": " << c << ",\n"
-                     << "\t\t\t\t\t\"tbins\": [";
+                dout << "\t\t{\n"
+                     << "\t\t\t\"row\": " << r << ",\n"
+                     << "\t\t\t\"col\": " << c << ",\n"
+                     << "\t\t\t\"tbins\": [";
 
                 Int_t tsum = 0;
                 Short_t data;
@@ -419,12 +417,9 @@ void AliAnalysisTaskMyTask::ReadDigits()
                 }
 
                 dout << "],\n";
-                dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
-                dout << "\t\t\t\t}" << ((c + 1 < ncol) ? "," : "") << endl;
+                dout << "\t\t\t\"tsum\": " << tsum << "\n";
+                dout << "\t\t}" << ((c + 1 < ncol) || (r + 1 < nrow) ? "," : "") << endl;
             }
-            
-            dout << "\t\t\t]\n";
-            dout << "\t\t}" << ((r + 1 < nrow) ? "," : "") << endl;
         }
 
         dout << "\t]\n}";
