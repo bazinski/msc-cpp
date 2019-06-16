@@ -385,20 +385,46 @@ void AliAnalysisTaskMyTask::ReadDigits()
   // expand digits for use in this task
   for (Int_t det=0; det<540; det++) {
     if (fDigMan->GetDigits(det)) {
+        //cout << "Creating file: " << Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det) << endl;
+
+        ofstream dout(Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det), std::ofstream::out | std::ofstream::trunc);
+        dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
+             << "\t\"det\": " << det << ",\n"
+             << "\t\"rows\": [\n";
+
         AliTRDarrayADC * adcArray = fDigMan->GetDigits(det);
         adcArray->Expand();
 
         Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
 
         for (Int_t r = 0; r < nrow; r++) {
+            dout << "\t\t{\n"
+                 << "\t\t\t\"row\": " << r << ",\n"
+                 << "\t\t\t\"cols\": [\n";
+
             for (Int_t c = 0; c < ncol; c++) {
+                dout << "\t\t\t\t{\n"
+                     << "\t\t\t\t\t\"col\": " << c << ",\n"
+                     << "\t\t\t\t\t\"tbins\": [";
+
                 for (Int_t t = 0; t < ntime; t++) {
-                    adcArray->GetData(r, c, t);
+                    dout << adcArray->GetData(r, c, t) << ((t + 1 < ntime) ? ", " : "");
                 }
 
+                dout << "]\n";
+                dout << "\t\t\t\t}" << ((c + 1 < ncol) ? "," : "") << endl;
             }
+            
+            dout << "\t\t\t]\n";
+            dout << "\t\t}" << ((r + 1 < nrow) ? "," : "") << endl;
         }
+
+        dout << "\t]\n}";
+
+        dout.flush();
+        dout.close();
     }
+    else cout << "Could not get digits" << endl;
   }
 }
 
