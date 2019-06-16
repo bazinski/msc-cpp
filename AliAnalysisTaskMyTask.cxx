@@ -383,43 +383,52 @@ void AliAnalysisTaskMyTask::ReadDigits()
   delete tr;
 
   // expand digits for use in this task
-  for (Int_t det=0; det<540; det++) {
+  for (Int_t det=0; det<540; det += 6) {
     if (fDigMan->GetDigits(det)) {
         //cout << "Creating file: " << Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det) << endl;
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("/mnt/jsroot/data/%d.%d.%d.%d.json", fEventNoInFile, sector, stack, layer), std::ofstream::out | std::ofstream::trunc);
+        ofstream dout(Form("/mnt/jsroot/data/%d.%d.%d.json", fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
-             << "\t\"det\": " << det << ",\n"
              << "\t\"sector\": " << sector << ",\n"
              << "\t\"stack\": " << stack << ",\n"
-             << "\t\"layer\": " << layer << ",\n"
-             << "\t\"pads\": [\n";
+             << "\t\"layers\": [\n";
 
-        AliTRDarrayADC * adcArray = fDigMan->GetDigits(det);
-        adcArray->Expand();
+        for (Int_t layer = 0; layer < 6; layer++) {
 
-        Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
+            dout << "\t\t{\n"
+                 << "\t\t\t\"layer\": " << layer << ",\n"
+                 << "\t\t\t\"det\": " << det + layer << ",\n"
+                 << "\t\t\t\"pads\": [\n";
 
-        for (Int_t r = 0; r < nrow; r++) {
-            for (Int_t c = 0; c < ncol; c++) {
-                dout << "\t\t{\n"
-                     << "\t\t\t\"row\": " << r << ",\n"
-                     << "\t\t\t\"col\": " << c << ",\n"
-                     << "\t\t\t\"tbins\": [";
+            AliTRDarrayADC * adcArray = fDigMan->GetDigits(det + layer);
+            adcArray->Expand();
 
-                Int_t tsum = 0;
-                Short_t data;
-                for (Int_t t = 0; t < ntime; t++) {
-                    data = adcArray->GetData(r, c, t);
-                    tsum += data;
-                    dout << data << ((t + 1 < ntime) ? ", " : "");
+            Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
+
+            for (Int_t r = 0; r < nrow; r++) {
+                for (Int_t c = 0; c < ncol; c++) {
+                    dout << "\t\t\t\t{\n"
+                        << "\t\t\t\t\t\"row\": " << r << ",\n"
+                        << "\t\t\t\t\t\"col\": " << c << ",\n"
+                        << "\t\t\t\t\t\"tbins\": [";
+
+                    Int_t tsum = 0;
+                    Short_t data;
+                    for (Int_t t = 0; t < ntime; t++) {
+                        data = adcArray->GetData(r, c, t);
+                        tsum += data;
+                        dout << data << ((t + 1 < ntime) ? ", " : "");
+                    }
+
+                    dout << "],\n";
+                    dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
+                    dout << "\t\t\t\t}" << ((c + 1 < ncol) || (r + 1 < nrow) ? "," : "") << endl;
                 }
-
-                dout << "],\n";
-                dout << "\t\t\t\"tsum\": " << tsum << "\n";
-                dout << "\t\t}" << ((c + 1 < ncol) || (r + 1 < nrow) ? "," : "") << endl;
             }
+
+            dout << "\t\t\t]\n";
+            dout << "\t\t}" << (layer + 1 < 6 ? "," : "") << endl;
         }
 
         dout << "\t]\n}";
