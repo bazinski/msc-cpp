@@ -19,35 +19,31 @@
  * as an example, one histogram is filled
  */
 
-#include "TFile.h"
-#include "TH3.h"
-#include "TTree.h"
-#include "TNtuple.h"
-
-#include "AliTRDdigitsManager.h"
-#include "AliTRDgeometry.h"
-
-#include "AliAnalysisTaskSE.h"
-
 #include "TSystem.h"
 #include "TFile.h"
 #include "TChain.h"
 #include "TH1F.h"
+#include "TH3.h"
+#include "TTree.h"
+#include "TNtuple.h"
 #include "TList.h"
-#include "AliAnalysisTask.h"
-#include "AliAnalysisManager.h"
+
 #include "AliESDEvent.h"
 #include "AliESDTrack.h"
 #include "AliESDTrdTrack.h"
 #include "AliESDTrdTracklet.h"
 #include "AliESDInputHandler.h"
 
-#include <iostream>
-#include <math.h>
+#include "AliTRDdigitsManager.h"
 #include "AliTRDgeometry.h"
+#include "AliTRDarrayADC.h"
 
+#include "AliAnalysisTask.h"
+#include "AliAnalysisManager.h"
+#include "AliAnalysisTaskSE.h"
 #include "AliAnalysisTaskMyTask.h"
 
+#include <math.h>
 #include <iostream>
 #include <fstream>
 using namespace std; // std namespace: so you can do things like 'cout'
@@ -59,7 +55,9 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
                                                      fESD(0), fOutputList(0), fHistPt(0), 
                                                      summary(0), eventCount(0), minY(0), maxY(0),
-                                                     fTracklet(0), mp(0), fDigMan(0), fGeo(0)
+                                                     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+                                                     fDigitsInputFileName("TRD.Digits.root"), 
+                                                     fDigitsInputFile(0), fEventNoInFile(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
@@ -68,7 +66,9 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
                                                                  fESD(0), fOutputList(0), fHistPt(0), 
                                                                  summary(0), eventCount(0), minY(0), maxY(0),
-                                                                 fTracklet(0), mp(0), fDigMan(0), fGeo(0)
+                                                                 fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+                                                                 fDigitsInputFileName("TRD.Digits.root"),
+                                                                 fDigitsInputFile(0), fEventNoInFile(0)
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -100,6 +100,7 @@ AliAnalysisTaskMyTask::~AliAnalysisTaskMyTask()
 
     delete summary;
 }
+
 //_____________________________________________________________________________
 void AliAnalysisTaskMyTask::UserCreateOutputObjects()
 {
@@ -130,7 +131,55 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
                               // so it needs to know what's in the output
 }
 
+//_____________________________________________________________________________
+TFile* AliAnalysisTaskMyTask::OpenDigitsFile(TString inputfile,
+					   TString digfile,
+					   TString opt)
+{
+  // we should check if we are reading ESDs or AODs - for now, only
+  // ESDs are supported
 
+  if (digfile == "") {
+    return NULL;
+  }
+
+  // construct the name of the digits file from the input file
+  inputfile.ReplaceAll("AliESDs.root", digfile);
+
+  // open the file
+  AliInfo( "opening digits file " + inputfile
+	   + " with option \"" + opt + "\"");
+  TFile* dfile = new TFile(inputfile, opt);
+  if (!dfile) {
+    AliWarning("digits file '" + inputfile + "' cannot be opened");
+  }
+
+  return dfile;
+}
+
+//_____________________________________________________________________________
+Bool_t AliAnalysisTaskMyTask::UserNotify()
+{
+  delete fDigitsInputFile;
+  //delete fDigitsOutputFile;
+
+  AliESDInputHandler *esdH = dynamic_cast<AliESDInputHandler*>
+    (AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler());
+
+  if ( ! esdH ) return kFALSE;
+  if ( ! esdH->GetTree() ) return kFALSE;
+  if ( ! esdH->GetTree()->GetCurrentFile() ) return kFALSE;
+
+  TString fname = esdH->GetTree()->GetCurrentFile()->GetName();
+
+  fDigitsInputFile = OpenDigitsFile(fname,fDigitsInputFileName,"");
+
+  fEventNoInFile = -1;
+
+  return kTRUE;
+}
+
+//_____________________________________________________________________________
 // Print a single AliESDTrdTracklet
 void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::string indent)
 {
@@ -148,6 +197,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::s
     *summary << indent << "}";    
 }
 
+//_____________________________________________________________________________
 // Print the array of AliESDTrdTracklet, calling PrintTrdTracklet for each
 void AliAnalysisTaskMyTask::PrintTrdTrackletArray(AliESDEvent *fESD, std::string indent)
 {
@@ -163,6 +213,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackletArray(AliESDEvent *fESD, std::string
     *summary << indent << "]";
 }
 
+//_____________________________________________________________________________
 // Print the array of AliESDTrdTrack
 void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string indent)
 {
@@ -207,6 +258,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
     *summary << indent << "]";
 }
 
+//_____________________________________________________________________________
 // Print a single AliESDtrack
 void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent)
 {
@@ -231,37 +283,13 @@ void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent
 }
 
 //_____________________________________________________________________________
-TFile* AliAnalysisTaskMyTask::OpenDigitsFile(TString inputfile,
-					   TString digfile,
-					   TString opt)
-{
-  // we should check if we are reading ESDs or AODs - for now, only
-  // ESDs are supported
-
-  if (digfile == "") {
-    return NULL;
-  }
-
-  // construct the name of the digits file from the input file
-  inputfile.ReplaceAll("AliESDs.root", digfile);
-
-  // open the file
-  AliInfo( "opening digits file " + inputfile
-	   + " with option \"" + opt + "\"");
-  TFile* dfile = new TFile(inputfile, opt);
-  if (!dfile) {
-    AliWarning("digits file '" + inputfile + "' cannot be opened");
-  }
-
-  return dfile;
-}
-
-//_____________________________________________________________________________
 void AliAnalysisTaskMyTask::UserExec(Option_t *)
 {
     fESD = dynamic_cast<AliESDEvent *>(InputEvent());
     const AliESDVertex * primaryVertex = fESD->GetPrimaryVertex();
-    const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
+    //const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
+
+    fEventNoInFile++;
     
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
@@ -288,8 +316,6 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
                 *summary << "," << endl;
             else *summary << endl;
 
-            cout << esdFriend->GetSize() << endl;
-
             std::string indent = TAB + TAB;
 
             *summary << indent << "{" << endl
@@ -313,7 +339,9 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
             delete mp;
 
-            *summary << indent << "}";            
+            *summary << indent << "}";   
+
+            ReadDigits();
         }
     }
 
@@ -321,6 +349,47 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
                               // the output manager which will take care of writing
                               // it to a file
 }
+
+//________________________________________________________________________
+void AliAnalysisTaskMyTask::ReadDigits()
+{
+
+  if (!fDigMan) {
+    AliError("no digits manager");
+    return;
+  }
+
+  // reset digit arrays
+  for (Int_t det=0; det<540; det++) {
+    fDigMan->ClearArrays(det);
+    fDigMan->ClearIndexes(det);
+  }
+
+  if (!fDigitsInputFile) {
+    AliError("digits file not available");
+    return;
+  }
+
+  // read digits from file
+  TTree* tr = (TTree*)fDigitsInputFile->Get(Form("Event%d/TreeD",
+                                                 fEventNoInFile));
+
+  if (!fDigitsInputFile) {
+    AliError(Form("digits tree for event %d not found", fEventNoInFile));
+    return;
+  }
+
+  fDigMan->ReadDigits(tr);
+  delete tr;
+
+  // expand digits for use in this task
+  for (Int_t det=0; det<540; det++) {
+    if (fDigMan->GetDigits(det)) {
+      fDigMan->GetDigits(det)->Expand();
+    }
+  }
+}
+
 //_____________________________________________________________________________
 void AliAnalysisTaskMyTask::Terminate(Option_t *)
 {
@@ -331,4 +400,3 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
             << "}" << endl;
     summary->close();
 }
-//_____________________________________________________________________________

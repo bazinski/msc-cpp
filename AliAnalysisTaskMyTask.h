@@ -15,6 +15,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         virtual                 ~AliAnalysisTaskMyTask();
 
         virtual void            UserCreateOutputObjects();
+        Bool_t                  UserNotify();
         virtual void            UserExec(Option_t* option);
         virtual void            Terminate(Option_t* option);
 
@@ -25,19 +26,28 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
     private:
+        void                    ReadDigits();
+  
         AliESDEvent*            fESD;           //! input event
         TList*                  fOutputList;    //! output list
         TH2F*                   fHistPt;        //! dummy histogram
-        TNtuple*                fTracklet;        //! dummy histogram
+        TNtuple*                fTracklet;      //! dummy histogram
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
+
         map<AliESDTrdTracklet *, Int_t> * mp;
 
         AliTRDdigitsManager* fDigMan; //! digits manager
         AliTRDgeometry* fGeo; //! TRD geometry
 
         TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
+
+        TString fDigitsInputFileName;         //! Name of digits file for reading
+        
+        TFile* fDigitsInputFile;             //! Digits file for reading
+
+        Int_t fEventNoInFile;
 
         AliAnalysisTaskMyTask(const AliAnalysisTaskMyTask&); // not implemented
         AliAnalysisTaskMyTask& operator=(const AliAnalysisTaskMyTask&); // not implemented

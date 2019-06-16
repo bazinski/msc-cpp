@@ -50,7 +50,7 @@ void runAnalysis()
         // if you want to run locally, we need to define some input
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
-        chain->Add("~/alidata/000294925/18000294925036.100/AliESDs.root");
+        chain->Add("~/alidata/000296934/18000296934019.100/AliESDs.root");
         // TChain * esdFriendTree = new TChain("esdFriendTree");
         // esdFriendTree->Add("~/alidata/000294925/18000294925036.100/AliESDfriends.root");
 
