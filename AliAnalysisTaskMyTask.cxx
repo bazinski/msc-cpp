@@ -307,7 +307,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
         // }
 
         //cout << primaryVertex->GetX() << endl;
-        if (eventCount++ > 5)
+        if (eventCount++ > 1)
         {
             return;
         }
@@ -385,7 +385,19 @@ void AliAnalysisTaskMyTask::ReadDigits()
   // expand digits for use in this task
   for (Int_t det=0; det<540; det++) {
     if (fDigMan->GetDigits(det)) {
-      fDigMan->GetDigits(det)->Expand();
+        AliTRDarrayADC * adcArray = fDigMan->GetDigits(det);
+        adcArray->Expand();
+
+        Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
+
+        for (Int_t r = 0; r < nrow; r++) {
+            for (Int_t c = 0; c < ncol; c++) {
+                for (Int_t t = 0; t < ntime; t++) {
+                    adcArray->GetData(r, c, t);
+                }
+
+            }
+        }
     }
   }
 }
