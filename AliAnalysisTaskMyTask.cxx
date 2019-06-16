@@ -390,6 +390,9 @@ void AliAnalysisTaskMyTask::ReadDigits()
         ofstream dout(Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
              << "\t\"det\": " << det << ",\n"
+             << "\t\"sector\": " << fGeo->GetSector(det) << ",\n"
+             << "\t\"stack\": " << fGeo->GetStack(det) << ",\n"
+             << "\t\"layer\": " << fGeo->GetLayer(det) << ",\n"
              << "\t\"rows\": [\n";
 
         AliTRDarrayADC * adcArray = fDigMan->GetDigits(det);
@@ -407,11 +410,16 @@ void AliAnalysisTaskMyTask::ReadDigits()
                      << "\t\t\t\t\t\"col\": " << c << ",\n"
                      << "\t\t\t\t\t\"tbins\": [";
 
+                Int_t tsum = 0;
+                Short_t data;
                 for (Int_t t = 0; t < ntime; t++) {
-                    dout << adcArray->GetData(r, c, t) << ((t + 1 < ntime) ? ", " : "");
+                    data = adcArray->GetData(r, c, t);
+                    tsum += data;
+                    dout << data << ((t + 1 < ntime) ? ", " : "");
                 }
 
-                dout << "]\n";
+                dout << "],\n";
+                dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
                 dout << "\t\t\t\t}" << ((c + 1 < ncol) ? "," : "") << endl;
             }
             
