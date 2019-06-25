@@ -56,7 +56,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
                                                      fESD(0), fOutputList(0), fHistPt(0), 
                                                      summary(0), eventCount(0), minY(0), maxY(0),
                                                      fTracklet(0), mp(0), fDigMan(0), fGeo(0),
-                                                     fDigitsInputFileName("TRD.Digits.root"), 
+                                                     fDigitsInputFileName("TRD.FltDigits.root"), 
                                                      fDigitsInputFile(0), fEventNoInFile(0)
 {
     // default constructor, don't allocate memory here!
@@ -67,7 +67,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTask
                                                                  fESD(0), fOutputList(0), fHistPt(0), 
                                                                  summary(0), eventCount(0), minY(0), maxY(0),
                                                                  fTracklet(0), mp(0), fDigMan(0), fGeo(0),
-                                                                 fDigitsInputFileName("TRD.Digits.root"),
+                                                                 fDigitsInputFileName("TRD.FltDigits.root"),
                                                                  fDigitsInputFile(0), fEventNoInFile(0)
 {
     // constructor
@@ -290,6 +290,8 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     //const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
 
     fEventNoInFile = fESD->GetEventNumberInFile();
+
+    if (!ReadDigits()) return;
     
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
@@ -341,7 +343,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
             *summary << indent << "}";   
 
-            ReadDigits();
+            //ReadDigits();
         }
     }
 
@@ -351,23 +353,17 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 }
 
 //________________________________________________________________________
-void AliAnalysisTaskMyTask::ReadDigits()
+Bool_t AliAnalysisTaskMyTask::ReadDigits()
 {
 
   if (!fDigMan) {
     AliError("no digits manager");
-    return;
-  }
-
-  // reset digit arrays
-  for (Int_t det=0; det<540; det++) {
-    fDigMan->ClearArrays(det);
-    fDigMan->ClearIndexes(det);
+    return false;
   }
 
   if (!fDigitsInputFile) {
     AliError("digits file not available");
-    return;
+    return false;
   }
 
   // read digits from file
@@ -376,7 +372,20 @@ void AliAnalysisTaskMyTask::ReadDigits()
 
   if (!fDigitsInputFile) {
     AliError(Form("digits tree for event %d not found", fEventNoInFile));
-    return;
+    return false;
+  }
+
+  if (!tr) {
+    AliError("error with digits tree");
+    return false;
+  }
+
+  AliInfo("reading digits");
+
+  // reset digit arrays
+  for (Int_t det=0; det<540; det++) {
+    fDigMan->ClearArrays(det);
+    fDigMan->ClearIndexes(det);
   }
 
   fDigMan->ReadDigits(tr);
@@ -405,12 +414,14 @@ void AliAnalysisTaskMyTask::ReadDigits()
             adcArray->Expand();
 
             Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
+            Int_t maxTsum = 0;
 
             for (Int_t r = 0; r < nrow; r++) {
                 for (Int_t c = 0; c < ncol; c++) {
                     dout << "\t\t\t\t{\n"
                         << "\t\t\t\t\t\"row\": " << r << ",\n"
                         << "\t\t\t\t\t\"col\": " << c << ",\n"
+                        << "\t\t\t\t\t\"layer\": " << layer << ",\n"
                         << "\t\t\t\t\t\"tbins\": [";
 
                     Int_t tsum = 0;
@@ -424,10 +435,13 @@ void AliAnalysisTaskMyTask::ReadDigits()
                     dout << "],\n";
                     dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
                     dout << "\t\t\t\t}" << ((c + 1 < ncol) || (r + 1 < nrow) ? "," : "") << endl;
+
+                    if (tsum > maxTsum) maxTsum = tsum;
                 }
             }
 
-            dout << "\t\t\t]\n";
+            dout << "\t\t\t],\n";
+            dout << "\t\t\t\"maxtsum\": " << maxTsum << "\n";
             dout << "\t\t}" << (layer + 1 < 6 ? "," : "") << endl;
         }
 
@@ -435,9 +449,15 @@ void AliAnalysisTaskMyTask::ReadDigits()
 
         dout.flush();
         dout.close();
+
+        return true;
     }
-    else cout << "Could not get digits" << endl;
+    else {
+        cout << "Could not get digits" << endl;
+    }
   }
+  
+  return false;
 }
 
 //_____________________________________________________________________________

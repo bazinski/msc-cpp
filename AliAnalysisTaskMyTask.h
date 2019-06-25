@@ -26,7 +26,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
     private:
-        void                    ReadDigits();
+        Bool_t                  ReadDigits();
   
         AliESDEvent*            fESD;           //! input event
         TList*                  fOutputList;    //! output list

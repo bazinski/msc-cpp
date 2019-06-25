@@ -50,14 +50,16 @@ void runAnalysis()
         // if you want to run locally, we need to define some input
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
-        chain->Add("~/alidata/000296934/18000296934019.100/AliESDs.root");
+        //chain->Add("~/alidata/000265378/root_archive.zip#AliESDs.root");
+        //chain->Add("alien:///alice/data/2016/LHC16q/000265377/pass1_CENT_wSDD/16000265377019.102/root_archive.zip#AliESDs.root");
+        chain->Add("~/alidata/2016/LHC16q/000265377/pass1_CENT_wSDD/16000265377019.102/root_archive.zip#AliESDs.root");
         // TChain * esdFriendTree = new TChain("esdFriendTree");
         // esdFriendTree->Add("~/alidata/000294925/18000294925036.100/AliESDfriends.root");
 
         //chain->AddFriend(esdFriendTree);
         // chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
         // start the analysis locally, reading the events from the tchain
-        mgr->StartAnalysis("local", chain, 100);
+        mgr->StartAnalysis("local", chain, 10000);
     } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();
