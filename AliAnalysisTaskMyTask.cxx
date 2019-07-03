@@ -253,10 +253,13 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         else if (lambdaDeg > -30) stack = 3;
         else stack = 4;
 
+        Bool_t isTrd = false;
+
         if (trdTrackMap.count(track) == 1) {
             AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
             sector = trdTrack->GetSector();
             stack = trdTrack->GetStack();
+            isTrd = true;
         }
         
         *summary << indent + TAB << "{" << endl;
@@ -266,6 +269,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         *summary << indent + TAB + TAB << "\"stack\": " << stack << "," << endl;
         *summary << indent + TAB + TAB << "\"sector\": " << sector << "," << endl;
         *summary << indent + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
+        *summary << indent + TAB + TAB << "\"type\": \"" << (isTrd ? "Trd Track" : "Esd Track") << "\"," << endl;
         
         PrintEsdTrack(track, indent + TAB + TAB);
             *summary << "," << endl;
