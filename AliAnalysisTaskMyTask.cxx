@@ -29,7 +29,7 @@
 #include "TList.h"
 
 #include "AliESDEvent.h"
-#include "AliESDTrack.h"
+#include "AliESDtrack.h"
 #include "AliESDTrdTrack.h"
 #include "AliESDTrdTracklet.h"
 #include "AliESDInputHandler.h"
@@ -217,44 +217,77 @@ void AliAnalysisTaskMyTask::PrintTrdTrackletArray(AliESDEvent *fESD, std::string
 // Print the array of AliESDTrdTrack
 void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string indent)
 {
-    Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
+    Int_t nTracks(fESD->GetNumberOfTracks());
 
     *summary << indent << "\"trdTracks\": [" << endl;
-    for (Int_t idx = 0; idx < nTRDTracks; idx++)
+    for (Int_t idx = 0; idx < nTracks; idx++)
     {
-        AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
+        AliESDtrack *track = fESD->GetTrack(idx);
+
+        //if (track->Pt() < 1) continue;
+        
+        const AliExternalTrackParam * param = track->GetOuterParam();
+        if (!param) continue;
+        if (param->GetParameter()[3] < 0.6) continue;
+        
+        Float_t alpha = param->GetAlpha();
+        if (alpha < 0) alpha += TMath::Pi() * 2;
+
+        Int_t sector = TMath::Nint(18.0 * alpha / (2 * TMath::Pi()) - 0.5);        
+        
         *summary << indent + TAB << "{" << endl;
         *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
-        *summary << indent + TAB + TAB << "\"pid\": " << track->GetPID() << "," << endl;
-        *summary << indent + TAB + TAB << "\"pt\": " << track->GetPt() << "," << endl;
-        *summary << indent + TAB + TAB << "\"stack\": " << track->GetStack() << "," << endl;
-        *summary << indent + TAB + TAB << "\"sector\": " << track->GetSector() << "," << endl;
+        //*summary << indent + TAB + TAB << "\"stack\": " << track->GetStack() << "," << endl;
+        *summary << indent + TAB + TAB << "\"sector\": " << sector << "," << endl;
         
-        AliVTrack *trackMatch = track->GetTrackMatch();
-        if (trackMatch != nullptr)
-        {
-            PrintEsdTrack((AliESDtrack *)trackMatch, indent + TAB + TAB);
+        PrintEsdTrack(track, indent + TAB + TAB);
             *summary << "," << endl;
-        }
 
         *summary << indent + TAB + TAB << "\"trdTracklets\": [";
-        bool first = true;
-        for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
-        {
-            AliESDTrdTracklet *tracklet = track->GetTracklet(layerIndex);
-            if (tracklet != nullptr)
-            {
-                *summary << (first ? "" : ",") << endl;
-                first = false;
-                PrintTrdTracklet(track->GetTracklet(layerIndex), indent + TAB + TAB + TAB);
-            }
-        }
-        
-        *summary << endl;
         *summary << indent + TAB + TAB << "]" << endl;
         
-        *summary << indent + TAB << "}" << (idx + 1 == nTRDTracks ? "" : ",") << endl;
+        *summary << indent + TAB << "}" << (idx + 1 == nTracks ? "" : ",") << endl;
     }
+
+    // Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
+
+    // //*summary << ",\n";
+    // for (Int_t idx = 0; idx < nTRDTracks; idx++)
+    // {
+    //     AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
+    //     *summary << indent + TAB << "{" << endl;
+    //     *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
+    //     *summary << indent + TAB + TAB << "\"pid\": " << track->GetPID() << "," << endl;
+    //     *summary << indent + TAB + TAB << "\"pt\": " << track->GetPt() << "," << endl;
+    //     *summary << indent + TAB + TAB << "\"stack\": " << track->GetStack() << "," << endl;
+    //     *summary << indent + TAB + TAB << "\"sector\": " << track->GetSector() << "," << endl;
+        
+    //     AliVTrack *trackMatch = track->GetTrackMatch();
+    //     if (trackMatch != nullptr)
+    //     {
+    //         PrintEsdTrack((AliESDtrack *)trackMatch, indent + TAB + TAB);
+    //         *summary << "," << endl;
+    //     }
+
+    //     *summary << indent + TAB + TAB << "\"trdTracklets\": [";
+    //     bool first = true;
+    //     for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
+    //     {
+    //         AliESDTrdTracklet *tracklet = track->GetTracklet(layerIndex);
+    //         if (tracklet != nullptr)
+    //         {
+    //             *summary << (first ? "" : ",") << endl;
+    //             first = false;
+    //             PrintTrdTracklet(track->GetTracklet(layerIndex), indent + TAB + TAB + TAB);
+    //         }
+    //     }
+        
+    //     *summary << endl;
+    //     *summary << indent + TAB + TAB << "]" << endl;
+        
+    //     *summary << indent + TAB << "}" << "," << endl;
+    // }
+    
     *summary << indent << "]";
 }
 
@@ -291,7 +324,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     fEventNoInFile = fESD->GetEventNumberInFile();
 
-    if (!ReadDigits()) return;
+    //if (!ReadDigits()) return;
     
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
@@ -300,16 +333,18 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
-    if (fESD->GetNumberOfTrdTracks() > 0)
-    {
+    // Bool_t found = false;
         // for (Int_t idx = 0; idx < nTRDTracks; idx++)
         // {    
         //     AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
-        //     if (track->GetSector() != 4) return;
+    //     found |= track->GetStack() == 0 && track->GetSector() == 0;
         // }
 
-        //cout << primaryVertex->GetX() << endl;
-        if (eventCount++ > 1)
+    // if (!found) return;
+
+    if (fESD->GetNumberOfTrdTracks() > 0)
+    {
+        if (eventCount++ > 10)
         {
             return;
         }
@@ -380,8 +415,6 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
     return false;
   }
 
-  AliInfo("reading digits");
-
   // reset digit arrays
   for (Int_t det=0; det<540; det++) {
     fDigMan->ClearArrays(det);
@@ -406,7 +439,9 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
         for (Int_t layer = 0; layer < 6; layer++) {
 
             dout << "\t\t{\n"
-                 << "\t\t\t\"layer\": " << layer << ",\n"
+                 << "\t\t\t\"event\": " << fEventNoInFile << ",\n"
+                 << "\t\t\t\"sector\": " << sector << ",\n"
+                 << "\t\t\t\"stack\": " << stack << ",\n"<< "\t\t\t\"layer\": " << layer << ",\n"
                  << "\t\t\t\"det\": " << det + layer << ",\n"
                  << "\t\t\t\"pads\": [\n";
 
