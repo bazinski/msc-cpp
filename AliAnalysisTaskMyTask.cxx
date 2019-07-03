@@ -217,6 +217,18 @@ void AliAnalysisTaskMyTask::PrintTrdTrackletArray(AliESDEvent *fESD, std::string
 // Print the array of AliESDTrdTrack
 void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string indent)
 {
+    std::map<AliESDtrack *, AliESDTrdTrack *> trdTrackMap;
+    Int_t nTrdTracks(fESD->GetNumberOfTrdTracks());
+
+    for (Int_t trdIdx = 0; trdIdx < nTrdTracks; trdIdx++) {
+        AliESDTrdTrack * trdTrack = fESD->GetTrdTrack(trdIdx);
+        AliVTrack *trackMatch = trdTrack->GetTrackMatch();
+        if (trackMatch != nullptr)
+        {
+            trdTrackMap.insert({(AliESDtrack *)trackMatch, trdTrack});
+        }
+    }
+
     Int_t nTracks(fESD->GetNumberOfTracks());
 
     *summary << indent << "\"trdTracks\": [" << endl;
@@ -224,93 +236,83 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
     {
         AliESDtrack *track = fESD->GetTrack(idx);
 
-        //if (track->Pt() < 1) continue;
-        
         const AliExternalTrackParam * param = track->GetOuterParam();
         if (!param) continue;
-        if (param->GetParameter()[3] < 0.6) continue;
         
         Float_t alpha = param->GetAlpha();
         if (alpha < 0) alpha += TMath::Pi() * 2;
 
+        Float_t tanLambda = param->GetParameter()[3]; // tangent of the track momentum dip angle
+        Float_t lambdaDeg = TMath::ATan(tanLambda) * 180 / TMath::Pi();
+
         Int_t sector = TMath::Nint(18.0 * alpha / (2 * TMath::Pi()) - 0.5);        
+        Int_t stack = -1;
+        if (lambdaDeg > 30) stack = 0;
+        else if (lambdaDeg > 8) stack = 1;
+        else if (lambdaDeg > -8) stack = 2;
+        else if (lambdaDeg > -30) stack = 3;
+        else stack = 4;
+
+        if (trdTrackMap.count(track) == 1) {
+            AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
+            sector = trdTrack->GetSector();
+            stack = trdTrack->GetStack();
+        }
         
         *summary << indent + TAB << "{" << endl;
         *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
-        //*summary << indent + TAB + TAB << "\"stack\": " << track->GetStack() << "," << endl;
+        *summary << indent + TAB + TAB << "\"alpha\": \"" << alpha << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"lambda\": \"" << lambdaDeg << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"stack\": " << stack << "," << endl;
         *summary << indent + TAB + TAB << "\"sector\": " << sector << "," << endl;
+        *summary << indent + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
         
         PrintEsdTrack(track, indent + TAB + TAB);
             *summary << "," << endl;
 
         *summary << indent + TAB + TAB << "\"trdTracklets\": [";
+        if (trdTrackMap.count(track) == 1) {
+            AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
+
+            bool first = true;
+            for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
+            {
+                AliESDTrdTracklet *tracklet = trdTrack->GetTracklet(layerIndex);
+                if (tracklet != nullptr)
+                {
+                    *summary << (first ? "" : ",") << endl;
+                    first = false;
+                    PrintTrdTracklet(tracklet, indent + TAB + TAB + TAB);
+                }
+            }
+        }
+        
+        *summary << endl;
         *summary << indent + TAB + TAB << "]" << endl;
         
         *summary << indent + TAB << "}" << (idx + 1 == nTracks ? "" : ",") << endl;
     }
-
-    // Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
-
-    // //*summary << ",\n";
-    // for (Int_t idx = 0; idx < nTRDTracks; idx++)
-    // {
-    //     AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
-    //     *summary << indent + TAB << "{" << endl;
-    //     *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
-    //     *summary << indent + TAB + TAB << "\"pid\": " << track->GetPID() << "," << endl;
-    //     *summary << indent + TAB + TAB << "\"pt\": " << track->GetPt() << "," << endl;
-    //     *summary << indent + TAB + TAB << "\"stack\": " << track->GetStack() << "," << endl;
-    //     *summary << indent + TAB + TAB << "\"sector\": " << track->GetSector() << "," << endl;
-        
-    //     AliVTrack *trackMatch = track->GetTrackMatch();
-    //     if (trackMatch != nullptr)
-    //     {
-    //         PrintEsdTrack((AliESDtrack *)trackMatch, indent + TAB + TAB);
-    //         *summary << "," << endl;
-    //     }
-
-    //     *summary << indent + TAB + TAB << "\"trdTracklets\": [";
-    //     bool first = true;
-    //     for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
-    //     {
-    //         AliESDTrdTracklet *tracklet = track->GetTracklet(layerIndex);
-    //         if (tracklet != nullptr)
-    //         {
-    //             *summary << (first ? "" : ",") << endl;
-    //             first = false;
-    //             PrintTrdTracklet(track->GetTracklet(layerIndex), indent + TAB + TAB + TAB);
-    //         }
-    //     }
-        
-    //     *summary << endl;
-    //     *summary << indent + TAB + TAB << "]" << endl;
-        
-    //     *summary << indent + TAB << "}" << "," << endl;
-    // }
     
     *summary << indent << "]";
 }
 
 //_____________________________________________________________________________
-// Print a single AliESDtrack
+// Print a single AliESDtrack as an array of [x, y, z] space points
 void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent)
 {
     *summary << indent << "\"track\": {" << endl;
     
-    *summary << indent + TAB << "\"path\": [" << endl;
+    *summary << indent + TAB << "\"path\": [" << endl << indent + TAB + TAB ;
     
     Double_t b = track->GetESDEvent()->GetMagneticField();
-
-    // AliESDfriendTrack *f = (AliESDfriendTrack*)track->GetFriendTrack();
-    // cout << f->GetMaxTRDcluster() << endl;
     
     Double_t * xyz = new Double_t[3];
     for (Int_t x = 1; x <= 470; x+=10)
         if (track->GetXYZAt(x, b, xyz))
-            *summary << indent + TAB + TAB << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] << ", \"z\": " << xyz[2] << "}," << endl;
+            *summary << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] << ", \"z\": " << xyz[2] << "},";
     delete [] xyz;
 
-    *summary << indent + TAB << "]," << endl;
+    *summary  << endl << indent + TAB << "]," << endl;
 
     *summary << indent << "}";
 }
