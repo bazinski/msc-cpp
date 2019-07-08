@@ -53,22 +53,24 @@ class AliAnalysisTaskMyTask; // your analysis class
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
-                                                     fESD(0), fOutputList(0), fHistPt(0), 
-                                                     summary(0), eventCount(0), minY(0), maxY(0),
-                                                     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
-                                                     fDigitsInputFileName("TRD.FltDigits.root"), 
-                                                     fDigitsInputFile(0), fEventNoInFile(0)
+    fESD(0), fOutputList(0), fHistPt(0), 
+    summary(0), eventCount(0), minY(0), maxY(0),
+    fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+    fDigitsInputFileName("TRD.FltDigits.root"), 
+    fDigitsInputFile(0), fEventNoInFile(0),
+    fOutputPath("/mnt/jsroot/data.min.js")
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
-                                                                 fESD(0), fOutputList(0), fHistPt(0), 
-                                                                 summary(0), eventCount(0), minY(0), maxY(0),
-                                                                 fTracklet(0), mp(0), fDigMan(0), fGeo(0),
-                                                                 fDigitsInputFileName("TRD.FltDigits.root"),
-                                                                 fDigitsInputFile(0), fEventNoInFile(0)
+    fESD(0), fOutputList(0), fHistPt(0), 
+    summary(0), eventCount(0), minY(0), maxY(0),
+    fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+    fDigitsInputFileName("TRD.FltDigits.root"),
+    fDigitsInputFile(0), fEventNoInFile(0),
+    fOutputPath("/mnt/jsroot/data.min.js")
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -121,9 +123,11 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
 
     fTracklet = new TNtuple("fTracklet", "fTracklet", "x:y:z:ly");
     fOutputList->Add(fTracklet);
+
+    cout << "Output Path: " << fOutputPath << endl;
                                         
     summary = new ofstream();
-    summary->open("/mnt/jsroot/data.min.js");
+    summary->open(fOutputPath);
     *summary << "function getData() {\n" + TAB + "return [";
 
     PostData(1, fOutputList); // postdata will notify the analysis manager of changes / updates to the
@@ -264,8 +268,8 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         
         *summary << indent + TAB << "{" << endl;
         *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
-        *summary << indent + TAB + TAB << "\"alpha\": \"" << alpha << "\"," << endl;
-        *summary << indent + TAB + TAB << "\"lambda\": \"" << lambdaDeg << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"alpha\": " << alpha << "," << endl;
+        *summary << indent + TAB + TAB << "\"lambda\": " << lambdaDeg << "," << endl;
         *summary << indent + TAB + TAB << "\"stack\": " << stack << "," << endl;
         *summary << indent + TAB + TAB << "\"sector\": " << sector << "," << endl;
         *summary << indent + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
@@ -348,14 +352,15 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     // if (!found) return;
 
-    if (fESD->GetNumberOfTrdTracks() > 0)
+    //if (fESD->GetNumberOfTrdTracks() > 0)
     {
-        if (eventCount++ > 10)
+        // if (eventCount++ > 200)
+        // {
+        //     return;
+        // }
+        // else 
         {
-            return;
-        }
-        else {
-            if (eventCount > 1) 
+            if (++eventCount > 1) 
                 *summary << "," << endl;
             else *summary << endl;
 
@@ -384,7 +389,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
             *summary << indent << "}";   
 
-            //ReadDigits();
+            ReadDigits();
         }
     }
 

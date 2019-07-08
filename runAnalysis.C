@@ -5,7 +5,7 @@
 #include "AliAnalysisTaskMyTask.h"
 #include "AliAnalysisManager.h"
 
-void runAnalysis()
+void runAnalysis(const char* path, const char* outputDirectory = "/mnt/jsroot/data.js")
 {
     // set if you want to run the analysis locally (kTRUE), or on grid (kFALSE)
     Bool_t local = kTRUE;
@@ -40,6 +40,8 @@ void runAnalysis()
     AliAnalysisTaskMyTask *task = AddMyTask();
 #endif
 
+    task->fOutputPath = outputDirectory;
+    cout << "Run output directory: " << task->fOutputPath << endl;
 
     if(!mgr->InitAnalysis()) return;
     mgr->SetDebugLevel(3);
@@ -50,9 +52,11 @@ void runAnalysis()
         // if you want to run locally, we need to define some input
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
-        chain->Add("~/alidata/2016/LHC16q/000265377/pass1_CENT_wSDD/16000265377019.103/root_archive.zip#AliESDs.root");
+        chain->Add(path);
         
-        mgr->StartAnalysis("local", chain);
+        mgr->StartAnalysis("local", chain, 10);
+
+        cout << endl;
     } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();

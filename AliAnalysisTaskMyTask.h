@@ -25,6 +25,8 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintTracks(AliESDEvent * fESD);
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
+        const char*             fOutputPath;
+
     private:
         Bool_t                  ReadDigits();
   
@@ -35,7 +37,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
-
+        
         map<AliESDTrdTracklet *, Int_t> * mp;
 
         AliTRDdigitsManager* fDigMan; //! digits manager
