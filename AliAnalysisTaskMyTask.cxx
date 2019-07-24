@@ -165,7 +165,6 @@ TFile* AliAnalysisTaskMyTask::OpenDigitsFile(TString inputfile,
 Bool_t AliAnalysisTaskMyTask::UserNotify()
 {
   delete fDigitsInputFile;
-  //delete fDigitsOutputFile;
 
   AliESDInputHandler *esdH = dynamic_cast<AliESDInputHandler*>
     (AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler());
@@ -330,36 +329,23 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 {
     fESD = dynamic_cast<AliESDEvent *>(InputEvent());
     const AliESDVertex * primaryVertex = fESD->GetPrimaryVertex();
-    //const AliESDfriend * esdFriend = dynamic_cast<AliESDfriend *>(ESDfriend());
 
     fEventNoInFile = fESD->GetEventNumberInFile();
 
-    //if (!ReadDigits()) return;
-    
     if (!fESD)
         return; // if the pointer to the event is empty (getting it failed) skip this event
 
-    Int_t nTracks(fESD->GetNumberOfTracks()); // see how many tracks there are in the event
-    Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
-    Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
+    if (eventCount > 5) 
+            return; // Only take the first 5 valid events
 
-    // Bool_t found = false;
-        // for (Int_t idx = 0; idx < nTRDTracks; idx++)
-        // {    
-        //     AliESDTrdTrack *track = fESD->GetTrdTrack(idx);
-    //     found |= track->GetStack() == 0 && track->GetSector() == 0;
-        // }
+    // if (fESD->GetEventNumberInFile() != 17) return;
 
-    // if (!found) return;
+    if (fESD->GetNumberOfTrdTracks() == 0)
+        return; // Only interested in events with at least 1 TRD track
 
-    //if (fESD->GetNumberOfTrdTracks() > 0)
-    {
-        // if (eventCount++ > 200)
-        // {
-        //     return;
-        // }
-        // else 
-        {
+    if (!ReadDigits()) 
+            return; // If there are no digits for this event, skip
+
             if (++eventCount > 1) 
                 *summary << "," << endl;
             else *summary << endl;
@@ -372,6 +358,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
             Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
+    // Create a map from tracklet pointers to corresponding index
             mp = new map<AliESDTrdTracklet *, Int_t>;
 
             for (Int_t idx = 0; idx < nTRDTracklets; idx++)
@@ -388,10 +375,6 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
             delete mp;
 
             *summary << indent << "}";   
-
-            ReadDigits();
-        }
-    }
 
     PostData(1, fOutputList); // stream the results the analysis of this event to
                               // the output manager which will take care of writing
@@ -495,15 +478,13 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
 
         dout.flush();
         dout.close();
-
-        return true;
     }
     else {
         cout << "Could not get digits" << endl;
     }
   }
   
-  return false;
+  return kTRUE;
 }
 
 //_____________________________________________________________________________
@@ -514,5 +495,6 @@ void AliAnalysisTaskMyTask::Terminate(Option_t *)
     *summary << endl;
     *summary << TAB << "];" << endl 
             << "}" << endl;
+    summary->flush();
     summary->close();
 }

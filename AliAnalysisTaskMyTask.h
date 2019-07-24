@@ -26,7 +26,8 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
         const char*             fOutputPath;
-
+        TString                 fDigitsInputFileName;         //! Name of digits file for reading
+        
     private:
         Bool_t                  ReadDigits();
   
@@ -45,8 +46,6 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
 
         TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
 
-        TString fDigitsInputFileName;         //! Name of digits file for reading
-        
         TFile* fDigitsInputFile;             //! Digits file for reading
 
         Int_t fEventNoInFile;
