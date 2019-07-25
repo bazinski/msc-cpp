@@ -39,6 +39,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         ofstream*               summary;        //! summary output text file
         int                     eventCount;     //! indicator for output comma appends
         Double_t                minY, maxY;
+        Bool_t                  usedDetectors[540];
         
         map<AliESDTrdTracklet *, Int_t> * mp;
 

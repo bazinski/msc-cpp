@@ -338,43 +338,55 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     if (eventCount > 5) 
             return; // Only take the first 5 valid events
 
-    // if (fESD->GetEventNumberInFile() != 17) return;
+    Int_t nTRDTracks(fESD->GetNumberOfTrdTracks());
 
-    if (fESD->GetNumberOfTrdTracks() == 0)
+    if (nTRDTracks == 0)
         return; // Only interested in events with at least 1 TRD track
 
+    for (Int_t det = 0; det < 540; det++)
+        usedDetectors[det] = kFALSE;
+
+    for (Int_t tIdx = 0; tIdx < nTRDTracks; tIdx++) {
+        AliESDTrdTrack *trdTrack = fESD->GetTrdTrack(tIdx);
+
+        Int_t sector = trdTrack->GetSector();
+        Int_t stack = trdTrack->GetStack();
+        Int_t det = fGeo->GetDetector(0, stack, sector);
+        usedDetectors[det] = kTRUE;
+    }
+
     if (!ReadDigits()) 
-            return; // If there are no digits for this event, skip
+        return; // If there are no digits for this event, skip
 
-            if (++eventCount > 1) 
-                *summary << "," << endl;
-            else *summary << endl;
+    if (++eventCount > 1) 
+        *summary << "," << endl;
+    else *summary << endl;
 
-            std::string indent = TAB + TAB;
+    std::string indent = TAB + TAB;
 
-            *summary << indent << "{" << endl
-                    << indent + TAB << "\"evno\": " << fESD->GetEventNumberInFile() << "," << endl
-                    << indent + TAB << "\"id\": \"E" << eventCount << "\"," << endl;
+    *summary << indent << "{" << endl
+            << indent + TAB << "\"evno\": " << fESD->GetEventNumberInFile() << "," << endl
+            << indent + TAB << "\"id\": \"E" << eventCount << "\"," << endl;
 
-            Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
+    Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
     // Create a map from tracklet pointers to corresponding index
-            mp = new map<AliESDTrdTracklet *, Int_t>;
+    mp = new map<AliESDTrdTracklet *, Int_t>;
 
-            for (Int_t idx = 0; idx < nTRDTracklets; idx++)
-            {    
-                AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
-                mp->insert({tracklet, idx});
-            }
+    for (Int_t idx = 0; idx < nTRDTracklets; idx++)
+    {    
+        AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
+        mp->insert({tracklet, idx});
+    }
 
-            PrintTrdTrackArray(fESD, indent + TAB);
-            *summary << "," << endl;
-            PrintTrdTrackletArray(fESD, indent + TAB);
-            *summary << endl;
+    PrintTrdTrackArray(fESD, indent + TAB);
+    *summary << "," << endl;
+    PrintTrdTrackletArray(fESD, indent + TAB);
+    *summary << endl;
 
-            delete mp;
+    delete mp;
 
-            *summary << indent << "}";   
+    *summary << indent << "}";   
 
     PostData(1, fOutputList); // stream the results the analysis of this event to
                               // the output manager which will take care of writing
@@ -405,7 +417,7 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
   }
 
   if (!tr) {
-    AliError("error with digits tree");
+    AliError("error reading digits tree for event");
     return false;
   }
 
@@ -420,8 +432,7 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
 
   // expand digits for use in this task
   for (Int_t det=0; det<540; det += 6) {
-    if (fDigMan->GetDigits(det)) {
-        //cout << "Creating file: " << Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det) << endl;
+    if (usedDetectors[det]) {        
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
         ofstream dout(Form("%s/%d.%d.%d.json", fOutputPath, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
@@ -431,7 +442,8 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
              << "\t\"layers\": [\n";
 
         for (Int_t layer = 0; layer < 6; layer++) {
-
+            if (!fDigMan->GetDigits(det + layer)) continue;
+            
             dout << "\t\t{\n"
                  << "\t\t\t\"event\": " << fEventNoInFile << ",\n"
                  << "\t\t\t\"sector\": " << sector << ",\n"
@@ -461,10 +473,10 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
                     }
 
                     if (tsum > 0)
-                    for (Int_t t = 0; t < ntime; t++) {
-                        data = adcArray->GetData(r, c, t);
-                        dout << data << ((t + 1 < ntime) ? ", " : "");
-                    }
+                        for (Int_t t = 0; t < ntime; t++) {
+                            data = adcArray->GetData(r, c, t);
+                            dout << data << ((t + 1 < ntime) ? ", " : "");
+                        }
 
                     dout << "],\n";
                     dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
@@ -483,9 +495,6 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
 
         dout.flush();
         dout.close();
-    }
-    else {
-        cout << "Could not get digits" << endl;
     }
   }
   
