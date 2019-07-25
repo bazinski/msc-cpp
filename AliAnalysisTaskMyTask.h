@@ -26,6 +26,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
         const char*             fOutputPath;
+        const char*             fOutputName;
         TString                 fDigitsInputFileName;         //! Name of digits file for reading
         
     private:

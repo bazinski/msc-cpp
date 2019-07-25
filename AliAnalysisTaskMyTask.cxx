@@ -58,7 +58,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"), 
     fDigitsInputFile(0), fEventNoInFile(0),
-    fOutputPath("/mnt/jsroot/data.min.js")
+    fOutputPath("/mnt/jsroot"), fOutputName("data")
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
@@ -70,7 +70,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTask
     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"),
     fDigitsInputFile(0), fEventNoInFile(0),
-    fOutputPath("/mnt/jsroot/data.min.js")
+    fOutputPath("/mnt/jsroot"), fOutputName("data")
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -124,10 +124,10 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     fTracklet = new TNtuple("fTracklet", "fTracklet", "x:y:z:ly");
     fOutputList->Add(fTracklet);
 
-    cout << "Output Path: " << fOutputPath << endl;
+    AliInfo(Form("Writing output to: %s, %s.js", fOutputPath, fOutputName));
                                         
     summary = new ofstream();
-    summary->open(fOutputPath);
+    summary->open(Form("%s/%s.js", fOutputPath, fOutputName));
     *summary << "function getData() {\n" + TAB + "return [";
 
     PostData(1, fOutputList); // postdata will notify the analysis manager of changes / updates to the
@@ -332,7 +332,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     fEventNoInFile = fESD->GetEventNumberInFile();
 
-    if (!fESD)
+    if (!fESD || fEventNoInFile < 0)
         return; // if the pointer to the event is empty (getting it failed) skip this event
 
     if (eventCount > 5) 
@@ -424,7 +424,7 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
         //cout << "Creating file: " << Form("/mnt/jsroot/data/%d.%d.json", fEventNoInFile, det) << endl;
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("/mnt/jsroot/data/%d.%d.%d.json", fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
+        ofstream dout(Form("%s/%d.%d.%d.json", fOutputPath, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
              << "\t\"sector\": " << sector << ",\n"
              << "\t\"stack\": " << stack << ",\n"
