@@ -458,6 +458,11 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
                     for (Int_t t = 0; t < ntime; t++) {
                         data = adcArray->GetData(r, c, t);
                         tsum += data;
+                    }
+
+                    if (tsum > 0)
+                    for (Int_t t = 0; t < ntime; t++) {
+                        data = adcArray->GetData(r, c, t);
                         dout << data << ((t + 1 < ntime) ? ", " : "");
                     }
 
