@@ -5,7 +5,7 @@
 #include "AliAnalysisTaskMyTask.h"
 #include "AliAnalysisManager.h"
 
-void runAnalysis(const char* path, const char* outputDirectory = "/mnt/jsroot/data.js")
+void runAnalysis()
 {
     // set if you want to run the analysis locally (kTRUE), or on grid (kFALSE)
     Bool_t local = kTRUE;
@@ -40,8 +40,6 @@ void runAnalysis(const char* path, const char* outputDirectory = "/mnt/jsroot/da
     AliAnalysisTaskMyTask *task = AddMyTask();
 #endif
 
-    task->fOutputPath = outputDirectory;
-    cout << "Run output directory: " << task->fOutputPath << endl;
 
     if(!mgr->InitAnalysis()) return;
     mgr->SetDebugLevel(3);
@@ -52,11 +50,21 @@ void runAnalysis(const char* path, const char* outputDirectory = "/mnt/jsroot/da
         // if you want to run locally, we need to define some input
         TChain* chain = new TChain("esdTree");
         // add a few files to the chain (change this so that your local files are added)
-        chain->Add(path);
-        
-        mgr->StartAnalysis("local", chain, 10);
+        //chain->Add("~/alidata/000265378/root_archive.zip#AliESDs.root");
+        //chain->Add("alien:///alice/data/2016/LHC16q/000265377/pass1_CENT_wSDD/16000265377019.102/root_archive.zip#AliESDs.root");
+        //chain->Add("~/alidata/2016/LHC16q/000265377/pass1_CENT_wSDD/16000265377019.102/root_archive.zip#AliESDs.root");
+        chain->Add("~/alidata/CernOpenDay/pPb/AliESDs.root");
+        task->fOutputPath = "/mnt/jsroot";
+        task->fOutputRelativeFolder = "data/pPb";
+        task->fOutputName = "script";
+        task->fDigitsInputFileName = "TRD.FltDigits.root";
+        // TChain * esdFriendTree = new TChain("esdFriendTree");
+        // esdFriendTree->Add("~/alidata/000294925/18000294925036.100/AliESDfriends.root");
 
-        cout << endl;
+        //chain->AddFriend(esdFriendTree);
+        // chain->Add("~/alidata/000294925/18000294925036.101/AliESDs.root");
+        // start the analysis locally, reading the events from the tchain
+        mgr->StartAnalysis("local", chain, 10000);
     } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();

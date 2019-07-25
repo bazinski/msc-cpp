@@ -58,7 +58,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"), 
     fDigitsInputFile(0), fEventNoInFile(0),
-    fOutputPath("/mnt/jsroot"), fOutputName("data")
+    fOutputPath("/mnt/jsroot"), fOutputName("script"), fOutputRelativeFolder("data")
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
@@ -70,7 +70,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTask
     fTracklet(0), mp(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"),
     fDigitsInputFile(0), fEventNoInFile(0),
-    fOutputPath("/mnt/jsroot"), fOutputName("data")
+    fOutputPath("/mnt/jsroot"), fOutputName("script"), fOutputRelativeFolder("data")
 {
     // constructor
     DefineInput(0, TChain::Class()); // define the input of the analysis: in this case we take a 'chain' of events
@@ -127,7 +127,12 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     AliInfo(Form("Writing output to: %s, %s.js", fOutputPath, fOutputName));
                                         
     summary = new ofstream();
-    summary->open(Form("%s/%s.js", fOutputPath, fOutputName));
+    summary->open(Form("%s/%s/%s.js", fOutputPath, fOutputRelativeFolder, fOutputName));
+
+    *summary << "function getDigitsLoadUrl(eventNo, sector, stack) { return `" 
+             << fOutputRelativeFolder << "/${eventNo}.${sector}.${stack}.json`; }" 
+             << endl << endl; 
+
     *summary << "function getData() {\n" + TAB + "return [";
 
     PostData(1, fOutputList); // postdata will notify the analysis manager of changes / updates to the
@@ -435,7 +440,7 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
     if (usedDetectors[det]) {        
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("%s/%d.%d.%d.json", fOutputPath, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
+        ofstream dout(Form("%s/%s/%d.%d.%d.json", fOutputPath, fOutputRelativeFolder, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
              << "\t\"sector\": " << sector << ",\n"
              << "\t\"stack\": " << stack << ",\n"

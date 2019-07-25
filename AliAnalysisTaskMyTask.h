@@ -25,9 +25,10 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         void                    PrintTracks(AliESDEvent * fESD);
         void                    PrintEsdTrack(AliESDtrack* track, std::string indent);
 
-        const char*             fOutputPath;
-        const char*             fOutputName;
-        TString                 fDigitsInputFileName;         //! Name of digits file for reading
+        const char*             fOutputPath;                //! Path to folder on disk where output will be generated
+        const char*             fOutputRelativeFolder;      //! Relative path that will be referenced in AJAX requests
+        const char*             fOutputName;                //! Output name that will be used for the .js file and .json output folder
+        TString                 fDigitsInputFileName;       //! Name of digits file for reading
         
     private:
         Bool_t                  ReadDigits();
