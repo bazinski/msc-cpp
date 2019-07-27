@@ -27,6 +27,7 @@
 #include "TTree.h"
 #include "TNtuple.h"
 #include "TList.h"
+#include "TMath.h"
 
 #include "AliESDEvent.h"
 #include "AliESDtrack.h"
@@ -124,7 +125,7 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     fTracklet = new TNtuple("fTracklet", "fTracklet", "x:y:z:ly");
     fOutputList->Add(fTracklet);
 
-    AliInfo(Form("Writing output to: %s, %s.js", fOutputPath, fOutputName));
+    AliInfo(Form("Writing output to: %s, %s, %s.js", fOutputPath, fOutputRelativeFolder, fOutputName));
                                         
     summary = new ofstream();
     summary->open(Form("%s/%s/%s.js", fOutputPath, fOutputRelativeFolder, fOutputName));
@@ -191,17 +192,24 @@ Bool_t AliAnalysisTaskMyTask::UserNotify()
 // Print a single AliESDTrdTracklet
 void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::string indent)
 {
+    Int_t lorentzAngle = 8;
+    Float_t tanLorentz = TMath::Tan(lorentzAngle / 180.0 * TMath::Pi());
+    Float_t dyDx = tracklet->GetDyDx();
+    Float_t localY = tracklet->GetLocalY();
+
+    Float_t adjDyDxPos = (dyDx + tanLorentz) / (1 - dyDx * tanLorentz);
+    Float_t adjDyDxNeg = (dyDx - tanLorentz) / (1 + dyDx * tanLorentz);
+
     *summary << indent << "{" << endl;
-    *summary << indent + TAB << "\"id\": \"E" << eventCount << "_L" << mp->at(tracklet) << "\"," << endl;
-    *summary << indent + TAB << "\"stack\": " << AliTRDgeometry::GetStack(tracklet->GetDetector()) << "," << endl;
-    *summary << indent + TAB << "\"sector\": " << AliTRDgeometry::GetSector(tracklet->GetDetector()) << "," << endl;
-    *summary << indent + TAB << "\"layer\": " << AliTRDgeometry::GetLayer(tracklet->GetDetector()) << "," << endl;
-    *summary << indent + TAB << "\"hc\": " << tracklet->GetHCId() % 2 << "," << endl;
-    *summary << indent + TAB << "\"binDy\": " << tracklet->GetBinDy() << "," << endl;
-    *summary << indent + TAB << "\"binY\": " << tracklet->GetBinY() << "," << endl;
-    *summary << indent + TAB << "\"binZ\": " << tracklet->GetBinZ() << "," << endl;
-    *summary << indent + TAB << "\"dyDx\": " << tracklet->GetDyDx() << "," << endl;
-    *summary << indent + TAB << "\"localY\": " << tracklet->GetLocalY() << "," << endl;
+    *summary << indent + TAB << "\"id\":\"E" << eventCount << "_L" << mp->at(tracklet) << "\"," << endl;
+    *summary << indent + TAB << "\"stk\":" << AliTRDgeometry::GetStack(tracklet->GetDetector()) << ", "
+                             << "\"sec\":" << AliTRDgeometry::GetSector(tracklet->GetDetector()) << ", "
+                             << "\"lyr\":" << AliTRDgeometry::GetLayer(tracklet->GetDetector()) << ", " 
+                             << "\"row\": " << tracklet->GetBinZ() << "," << endl;
+    *summary << indent + TAB << "\"lY\": " << tracklet->GetLocalY() << ", "
+                             << "\"dyDx\": " << dyDx << ", " 
+                             << "\"dyDxAP\": " << adjDyDxPos << ", "
+                             << "\"dyDxAN\": " << adjDyDxNeg << "," << endl;
     *summary << indent << "}";    
 }
 
@@ -211,7 +219,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackletArray(AliESDEvent *fESD, std::string
 {
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
-    *summary << indent << "\"trdTracklets\": [" << endl;
+    *summary << indent << "\"trklts\": [" << endl;
     for (Int_t idx = 0; idx < nTRDTracklets; idx++)
     {
         AliESDTrdTracklet *tracklet = fESD->GetTrdTracklet(idx);
@@ -239,7 +247,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
 
     Int_t nTracks(fESD->GetNumberOfTracks());
 
-    *summary << indent << "\"trdTracks\": [" << endl;
+    *summary << indent << "\"tracks\": [" << endl;
     for (Int_t idx = 0; idx < nTracks; idx++)
     {
         AliESDtrack *track = fESD->GetTrack(idx);
@@ -274,15 +282,14 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
         *summary << indent + TAB + TAB << "\"alpha\": " << alpha << "," << endl;
         *summary << indent + TAB + TAB << "\"lambda\": " << lambdaDeg << "," << endl;
-        *summary << indent + TAB + TAB << "\"stack\": " << stack << "," << endl;
-        *summary << indent + TAB + TAB << "\"sector\": " << sector << "," << endl;
+        *summary << indent + TAB + TAB << "\"stk\": " << stack << "," << endl;
+        *summary << indent + TAB + TAB << "\"sec\": " << sector << "," << endl;
         *summary << indent + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
-        *summary << indent + TAB + TAB << "\"type\": \"" << (isTrd ? "Trd Track" : "Esd Track") << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"type\": \"" << (isTrd ? "Trd" : "Esd") << "\"," << endl;
         
         PrintEsdTrack(track, indent + TAB + TAB);
-            *summary << "," << endl;
 
-        *summary << indent + TAB + TAB << "\"trdTracklets\": [";
+        *summary << indent + TAB + TAB << "\"trklts\": [";
         if (trdTrackMap.count(track) == 1) {
             AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
 
@@ -312,21 +319,18 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
 // Print a single AliESDtrack as an array of [x, y, z] space points
 void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent)
 {
-    *summary << indent << "\"track\": {" << endl;
-    
-    *summary << indent + TAB << "\"path\": [" << endl << indent + TAB + TAB ;
+    *summary << indent << "\"path\": [" << endl << indent + TAB;
     
     Double_t b = track->GetESDEvent()->GetMagneticField();
     
     Double_t * xyz = new Double_t[3];
     for (Int_t x = 1; x <= 470; x+=10)
         if (track->GetXYZAt(x, b, xyz))
-            *summary << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] << ", \"z\": " << xyz[2] << "},";
+            *summary << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] << ", \"z\": " << xyz[2]
+                     << ", \"r\": " << TMath::Sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]) << "},";
     delete [] xyz;
 
-    *summary  << endl << indent + TAB << "]," << endl;
-
-    *summary << indent << "}";
+    *summary  << endl << indent << "]," << endl;
 }
 
 //_____________________________________________________________________________
