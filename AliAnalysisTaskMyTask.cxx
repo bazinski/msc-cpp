@@ -188,8 +188,8 @@ Bool_t AliAnalysisTaskMyTask::UserNotify()
   return kTRUE;
 }
 
-char * FormTrackletId(Int_t eventCount, Int_t trackletIndex) {
-    return Form("\"E%d_L%d\"", eventCount, trackletIndex);
+char * FormTrackletId(Int_t eventIndex, Int_t trackletIndex) {
+    return Form("\"E%d_L%d\"", eventIndex, trackletIndex);
 }
 
 //_____________________________________________________________________________
@@ -205,7 +205,7 @@ void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::s
     Float_t adjDyDxNeg = (dyDx - tanLorentz) / (1 + dyDx * tanLorentz);
 
     *summary << indent << "{" << endl;
-    *summary << indent + TAB << "\"id\": " << FormTrackletId(eventCount, mp->at(tracklet)) << "," << endl;
+    *summary << indent + TAB << "\"id\": " << FormTrackletId(fESD->GetEventNumberInFile(), mp->at(tracklet)) << "," << endl;
     *summary << indent + TAB << "\"stk\":" << AliTRDgeometry::GetStack(tracklet->GetDetector()) << ", "
                              << "\"sec\":" << AliTRDgeometry::GetSector(tracklet->GetDetector()) << ", "
                              << "\"lyr\":" << AliTRDgeometry::GetLayer(tracklet->GetDetector()) << ", " 
@@ -287,7 +287,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
             isTrd = true;
         }
 
-        TString eventId = TString(Form("\"E%d_T%d\"", eventCount, idx));
+        TString eventId = TString(Form("\"E%d_T%d\"", fESD->GetEventNumberInFile(), idx));
         
         *summary << indent + TAB + TAB << "\"id\": " << eventId << "," << endl;
         *summary << indent + TAB + TAB << "\"stk\": " << stack << "," << endl;
@@ -313,7 +313,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
                 if (tracklet != nullptr)
                 {                    
                     fTrackletMap->insert({tracklet, eventId});
-                    *summary << (first ? "" : ", ") << FormTrackletId(eventCount, mp->at(tracklet));
+                    *summary << (first ? "" : ", ") << FormTrackletId(fESD->GetEventNumberInFile(), mp->at(tracklet));
                     first = false;
                     //PrintTrdTracklet(tracklet, indent + TAB + TAB + TAB);
                 }
@@ -387,8 +387,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     std::string indent = TAB + TAB;
 
     *summary << indent << "{" << endl
-            << indent + TAB << "\"evno\": " << fESD->GetEventNumberInFile() << "," << endl
-            << indent + TAB << "\"id\": \"E" << eventCount << "\"," << endl
+            << indent + TAB << "\"id\": \"E" << fESD->GetEventNumberInFile() << "\"," << endl
             << indent + TAB << "\"b\": {" << endl
             << indent + TAB + TAB << "\"e\": " << fESD->GetBeamEnergy() << "," << endl
             << indent + TAB + TAB << "\"t\": \"" << fESD->GetBeamType() << "\"," << endl
@@ -464,7 +463,7 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
     if (usedDetectors[det]) {        
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("%s/%s/%d.%d.%d.json", fOutputPath, fOutputRelativeFolder, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
+        ofstream dout(Form("%s/%s/E%d.%d.%d.json", fOutputPath, fOutputRelativeFolder, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
              << "\t\"sector\": " << sector << ",\n"
              << "\t\"stack\": " << stack << ",\n"
