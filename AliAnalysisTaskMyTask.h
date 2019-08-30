@@ -43,6 +43,7 @@ class AliAnalysisTaskMyTask : public AliAnalysisTaskSE
         Bool_t                  usedDetectors[540];
         
         map<AliESDTrdTracklet *, Int_t> * mp;
+        map<AliESDTrdTracklet *, TString> * fTrackletMap;
 
         AliTRDdigitsManager* fDigMan; //! digits manager
         AliTRDgeometry* fGeo; //! TRD geometry

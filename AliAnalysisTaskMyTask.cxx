@@ -56,7 +56,7 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
     fESD(0), fOutputList(0), fHistPt(0), 
     summary(0), eventCount(0), minY(0), maxY(0),
-    fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+    fTracklet(0), mp(0), fTrackletMap(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"), 
     fDigitsInputFile(0), fEventNoInFile(0),
     fOutputPath("/mnt/jsroot"), fOutputName("script"), fOutputRelativeFolder("data")
@@ -68,7 +68,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
     fESD(0), fOutputList(0), fHistPt(0), 
     summary(0), eventCount(0), minY(0), maxY(0),
-    fTracklet(0), mp(0), fDigMan(0), fGeo(0),
+    fTracklet(0), mp(0), fTrackletMap(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"),
     fDigitsInputFile(0), fEventNoInFile(0),
     fOutputPath("/mnt/jsroot"), fOutputName("script"), fOutputRelativeFolder("data")
@@ -188,6 +188,10 @@ Bool_t AliAnalysisTaskMyTask::UserNotify()
   return kTRUE;
 }
 
+char * FormTrackletId(Int_t eventCount, Int_t trackletIndex) {
+    return Form("\"E%d_L%d\"", eventCount, trackletIndex);
+}
+
 //_____________________________________________________________________________
 // Print a single AliESDTrdTracklet
 void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::string indent)
@@ -201,11 +205,13 @@ void AliAnalysisTaskMyTask::PrintTrdTracklet(AliESDTrdTracklet *tracklet, std::s
     Float_t adjDyDxNeg = (dyDx - tanLorentz) / (1 + dyDx * tanLorentz);
 
     *summary << indent << "{" << endl;
-    *summary << indent + TAB << "\"id\":\"E" << eventCount << "_L" << mp->at(tracklet) << "\"," << endl;
+    *summary << indent + TAB << "\"id\": " << FormTrackletId(eventCount, mp->at(tracklet)) << "," << endl;
     *summary << indent + TAB << "\"stk\":" << AliTRDgeometry::GetStack(tracklet->GetDetector()) << ", "
                              << "\"sec\":" << AliTRDgeometry::GetSector(tracklet->GetDetector()) << ", "
                              << "\"lyr\":" << AliTRDgeometry::GetLayer(tracklet->GetDetector()) << ", " 
-                             << "\"row\": " << tracklet->GetBinZ() << "," << endl;
+                             << "\"row\": " << tracklet->GetBinZ() << ", " 
+                             << "\"trk\": " << (fTrackletMap->find(tracklet) != fTrackletMap->end() ? fTrackletMap->at(tracklet) : "null") << "," 
+                             << endl;
     *summary << indent + TAB << "\"lY\": " << tracklet->GetLocalY() << ", "
                              << "\"dyDx\": " << dyDx << ", " 
                              << "\"dyDxAP\": " << adjDyDxPos << ", "
@@ -251,6 +257,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
     for (Int_t idx = 0; idx < nTracks; idx++)
     {
         AliESDtrack *track = fESD->GetTrack(idx);
+        AliESDTrdTrack * trdTrack = nullptr;
 
         const AliExternalTrackParam * param = track->GetOuterParam();
         if (!param) continue;
@@ -272,45 +279,48 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         *summary << indent + TAB << "{" << endl;
         
         Bool_t isTrd = false;
-
+        
         if (trdTrackMap.count(track) == 1) {
-            AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
+            trdTrack = trdTrackMap.at(track);
             sector = trdTrack->GetSector();
             stack = trdTrack->GetStack();
             isTrd = true;
-
-            *summary << indent + TAB + TAB << "\"pid\": " << trdTrack->GetPID() << "," << endl;
         }
+
+        TString eventId = TString(Form("\"E%d_T%d\"", eventCount, idx));
         
-        *summary << indent + TAB + TAB << "\"id\": \"E" << eventCount << "_T" << idx << "\"," << endl;
-        *summary << indent + TAB + TAB << "\"alpha\": " << alpha << "," << endl;
-        *summary << indent + TAB + TAB << "\"lambda\": " << lambdaDeg << "," << endl;
+        *summary << indent + TAB + TAB << "\"id\": " << eventId << "," << endl;
         *summary << indent + TAB + TAB << "\"stk\": " << stack << "," << endl;
         *summary << indent + TAB + TAB << "\"sec\": " << sector << "," << endl;
-        *summary << indent + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
-        *summary << indent + TAB + TAB << "\"type\": \"" << (isTrd ? "Trd" : "Esd") << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"typ\": \"" << (isTrd ? "Trd" : "Esd") << "\"," << endl;
+        *summary << indent + TAB + TAB << "\"i\": {" << endl;
+        *summary << indent + TAB + TAB + TAB << "\"pT\": " << track->Pt() << "," << endl;
+        *summary << indent + TAB + TAB + TAB << "\"alpha\": " << alpha << "," << endl;
+        *summary << indent + TAB + TAB + TAB << "\"lambda\": " << lambdaDeg << "," << endl;
+        if (isTrd) 
+            *summary << indent + TAB + TAB + TAB << "\"pid\": " << trdTrack->GetPID() << "," << endl;
+
+        *summary << indent + TAB + TAB << "}," << endl;
         
         PrintEsdTrack(track, indent + TAB + TAB);
 
         *summary << indent + TAB + TAB << "\"trklts\": [";
-        if (trdTrackMap.count(track) == 1) {
-            AliESDTrdTrack * trdTrack = trdTrackMap.at(track);
-
+        if (isTrd) {
             bool first = true;
             for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
             {
                 AliESDTrdTracklet *tracklet = trdTrack->GetTracklet(layerIndex);
                 if (tracklet != nullptr)
-                {
-                    *summary << (first ? "" : ",") << endl;
+                {                    
+                    fTrackletMap->insert({tracklet, eventId});
+                    *summary << (first ? "" : ", ") << FormTrackletId(eventCount, mp->at(tracklet));
                     first = false;
-                    PrintTrdTracklet(tracklet, indent + TAB + TAB + TAB);
+                    //PrintTrdTracklet(tracklet, indent + TAB + TAB + TAB);
                 }
             }
         }
         
-        *summary << endl;
-        *summary << indent + TAB + TAB << "]" << endl;
+        *summary << "]" << endl;
         
         *summary << indent + TAB << "}" << (idx + 1 == nTracks ? "" : ",") << endl;
     }
@@ -378,12 +388,18 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     *summary << indent << "{" << endl
             << indent + TAB << "\"evno\": " << fESD->GetEventNumberInFile() << "," << endl
-            << indent + TAB << "\"id\": \"E" << eventCount << "\"," << endl;
+            << indent + TAB << "\"id\": \"E" << eventCount << "\"," << endl
+            << indent + TAB << "\"b\": {" << endl
+            << indent + TAB + TAB << "\"e\": " << fESD->GetBeamEnergy() << "," << endl
+            << indent + TAB + TAB << "\"t\": \"" << fESD->GetBeamType() << "\"," << endl
+            << indent + TAB << "}," << endl
+            << indent + TAB << "\"ft\": \"" << fESD->GetHeader()->GetFiredTriggerInputs() << "\"," << endl;
 
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
     // Create a map from tracklet pointers to corresponding index
     mp = new map<AliESDTrdTracklet *, Int_t>;
+    fTrackletMap = new map<AliESDTrdTracklet *, TString>;
 
     for (Int_t idx = 0; idx < nTRDTracklets; idx++)
     {    
@@ -397,6 +413,7 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
     *summary << endl;
 
     delete mp;
+    delete fTrackletMap;
 
     *summary << indent << "}";   
 
