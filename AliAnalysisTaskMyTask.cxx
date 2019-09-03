@@ -466,14 +466,14 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
         
         ofstream dout(outputPath, std::ofstream::out | std::ofstream::trunc);
 
-        dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
-             << "\t\"layers\": [\n";
+        dout << "{\n\t\"evid\": " << fEventNoInFile << ",\n"
+             << "\t\"lyrs\": [\n";
 
         for (Int_t layer = 0; layer < 6; layer++) {
             if (!fDigMan->GetDigits(det + layer)) continue;
             
             dout << "\t\t{\n"
-                 << "\t\t\t\"layer\": " << layer << ",\n"
+                 << "\t\t\t\"lyr\": " << layer << ",\n"
                  << "\t\t\t\"pads\": [\n";
 
             AliTRDarrayADC * adcArray = fDigMan->GetDigits(det + layer);
