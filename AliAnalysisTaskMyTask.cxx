@@ -338,8 +338,8 @@ void AliAnalysisTaskMyTask::PrintEsdTrack(AliESDtrack *track, std::string indent
     Double_t * xyz = new Double_t[3];
     for (Int_t x = 1; x <= 470; x+=10)
         if (track->GetXYZAt(x, b, xyz))
-            *summary << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] << ", \"z\": " << xyz[2]
-                     << ", \"r\": " << TMath::Sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]) << "},";
+            *summary << "{ \"x\": " << xyz[0] << ", \"y\": " << xyz[1] 
+                     << ", \"z\": " << xyz[2] << "},";
     delete [] xyz;
 
     *summary  << endl << indent << "]," << endl;
