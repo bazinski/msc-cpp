@@ -304,7 +304,7 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         
         PrintEsdTrack(track, indent + TAB + TAB);
 
-        *summary << indent + TAB + TAB << "\"trklts\": [";
+        *summary << indent + TAB + TAB << "\"tlids\": [";
         if (isTrd) {
             bool first = true;
             for (Int_t layerIndex = 0; layerIndex < 6; layerIndex++)
@@ -315,7 +315,6 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
                     fTrackletMap->insert({tracklet, eventId});
                     *summary << (first ? "" : ", ") << FormTrackletId(fESD->GetEventNumberInFile(), mp->at(tracklet));
                     first = false;
-                    //PrintTrdTracklet(tracklet, indent + TAB + TAB + TAB);
                 }
             }
         }
@@ -388,11 +387,11 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
 
     *summary << indent << "{" << endl
             << indent + TAB << "\"id\": \"E" << fESD->GetEventNumberInFile() << "\"," << endl
-            << indent + TAB << "\"b\": {" << endl
-            << indent + TAB + TAB << "\"e\": " << fESD->GetBeamEnergy() << "," << endl
-            << indent + TAB + TAB << "\"t\": \"" << fESD->GetBeamType() << "\"," << endl
-            << indent + TAB << "}," << endl
-            << indent + TAB << "\"ft\": \"" << fESD->GetHeader()->GetFiredTriggerInputs() << "\"," << endl;
+            << indent + TAB << "\"i\": {" << endl
+            << indent + TAB + TAB << "\"be\": " << fESD->GetBeamEnergy() << "," << endl
+            << indent + TAB + TAB << "\"bt\": \"" << fESD->GetBeamType() << "\"," << endl
+            << indent + TAB + TAB << "\"ft\": \"" << fESD->GetHeader()->GetFiredTriggerInputs() << "\"," << endl
+            << indent + TAB << "}," << endl;            
 
     Int_t nTRDTracklets(fESD->GetNumberOfTrdTracklets());
 
@@ -463,36 +462,29 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
     if (usedDetectors[det]) {        
         Int_t sector = fGeo->GetSector(det), stack = fGeo->GetStack(det), layer = fGeo->GetLayer(det);
 
-        ofstream dout(Form("%s/%s/E%d.%d.%d.json", fOutputPath, fOutputRelativeFolder, fEventNoInFile, sector, stack), std::ofstream::out | std::ofstream::trunc);
+        Char_t * outputPath = Form("%s/%s/E%d.%d.%d.json", fOutputPath, fOutputRelativeFolder, fEventNoInFile, sector, stack);
+        
+        ofstream dout(outputPath, std::ofstream::out | std::ofstream::trunc);
+
         dout << "{\n\t\"event\": " << fEventNoInFile << ",\n"
-             << "\t\"sector\": " << sector << ",\n"
-             << "\t\"stack\": " << stack << ",\n"
              << "\t\"layers\": [\n";
 
         for (Int_t layer = 0; layer < 6; layer++) {
             if (!fDigMan->GetDigits(det + layer)) continue;
             
             dout << "\t\t{\n"
-                 << "\t\t\t\"event\": " << fEventNoInFile << ",\n"
-                 << "\t\t\t\"sector\": " << sector << ",\n"
-                 << "\t\t\t\"stack\": " << stack << ",\n"<< "\t\t\t\"layer\": " << layer << ",\n"
-                 << "\t\t\t\"det\": " << det + layer << ",\n"
+                 << "\t\t\t\"layer\": " << layer << ",\n"
                  << "\t\t\t\"pads\": [\n";
 
             AliTRDarrayADC * adcArray = fDigMan->GetDigits(det + layer);
             adcArray->Expand();
 
             Int_t nrow = adcArray->GetNrow(), ncol = adcArray->GetNcol(), ntime = adcArray->GetNtime();
-            Int_t maxTsum = 0;
+            
+            Bool_t first = true;
 
             for (Int_t r = 0; r < nrow; r++) {
                 for (Int_t c = 0; c < ncol; c++) {
-                    dout << "\t\t\t\t{\n"
-                        << "\t\t\t\t\t\"row\": " << r << ",\n"
-                        << "\t\t\t\t\t\"col\": " << c << ",\n"
-                        << "\t\t\t\t\t\"layer\": " << layer << ",\n"
-                        << "\t\t\t\t\t\"tbins\": [";
-
                     Int_t tsum = 0;
                     Short_t data;
                     for (Int_t t = 0; t < ntime; t++) {
@@ -500,22 +492,27 @@ Bool_t AliAnalysisTaskMyTask::ReadDigits()
                         tsum += data;
                     }
 
-                    if (tsum > 0)
+                    if (tsum > 0) {
+                        if (first) first = false;
+                        else dout << ",\n";
+
+                        dout << "\t\t\t\t{\n"
+                             << "\t\t\t\t\t\"row\": " << r << ",\n"
+                             << "\t\t\t\t\t\"col\": " << c << ",\n"
+                             << "\t\t\t\t\t\"tbins\": [";
+
                         for (Int_t t = 0; t < ntime; t++) {
                             data = adcArray->GetData(r, c, t);
                             dout << data << ((t + 1 < ntime) ? ", " : "");
                         }
-
-                    dout << "],\n";
-                    dout << "\t\t\t\t\t\"tsum\": " << tsum << "\n";
-                    dout << "\t\t\t\t}" << ((c + 1 < ncol) || (r + 1 < nrow) ? "," : "") << endl;
-
-                    if (tsum > maxTsum) maxTsum = tsum;
+                        
+                        dout << "]\n";
+                        dout << "\t\t\t\t}";
+                    }
                 }
             }
 
-            dout << "\t\t\t],\n";
-            dout << "\t\t\t\"maxtsum\": " << maxTsum << "\n";
+            dout << "\n\t\t\t]\n";
             dout << "\t\t}" << (layer + 1 < 6 ? "," : "") << endl;
         }
 
