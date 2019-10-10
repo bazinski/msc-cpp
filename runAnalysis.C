@@ -58,6 +58,8 @@ void runAnalysis()
         task->fOutputRelativeFolder = "data/pPb";
         task->fOutputName = "script";
         task->fDigitsInputFileName = "TRD.FltDigits.root";
+
+        task->fExportEsdTracks = kTRUE;
         // TChain * esdFriendTree = new TChain("esdFriendTree");
         // esdFriendTree->Add("~/alidata/000294925/18000294925036.100/AliESDfriends.root");
 

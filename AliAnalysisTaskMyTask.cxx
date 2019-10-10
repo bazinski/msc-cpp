@@ -55,7 +55,7 @@ ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
     fESD(0), fOutputList(0), fHistPt(0), 
-    summary(0), eventCount(0), minY(0), maxY(0),
+    summary(0), eventCount(0), minY(0), maxY(0), fExportEsdTracks(0),
     fTracklet(0), mp(0), fTrackletMap(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"), 
     fDigitsInputFile(0), fEventNoInFile(0),
@@ -67,7 +67,7 @@ AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(),
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char *name) : AliAnalysisTaskSE(name),
     fESD(0), fOutputList(0), fHistPt(0), 
-    summary(0), eventCount(0), minY(0), maxY(0),
+    summary(0), eventCount(0), minY(0), maxY(0), fExportEsdTracks(0),
     fTracklet(0), mp(0), fTrackletMap(0), fDigMan(0), fGeo(0),
     fDigitsInputFileName("TRD.FltDigits.root"),
     fDigitsInputFile(0), fEventNoInFile(0),
@@ -260,23 +260,28 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
         AliESDTrdTrack * trdTrack = nullptr;
 
         const AliExternalTrackParam * param = track->GetOuterParam();
-        if (!param) continue;
         
-        Float_t alpha = param->GetAlpha();
-        if (alpha < 0) alpha += TMath::Pi() * 2;
+        Int_t sector = -1;
+        Int_t stack = -1;
+        Float_t alpha = 0;
+        Float_t lambdaDeg = 0;
+
+        if (param) {
+            alpha = param->GetAlpha();
+            if (alpha < 0) 
+                alpha += TMath::Pi() * 2;
+
+            sector = TMath::Nint(18.0 * alpha / (2 * TMath::Pi()) - 0.5);        
 
         Float_t tanLambda = param->GetParameter()[3]; // tangent of the track momentum dip angle
-        Float_t lambdaDeg = TMath::ATan(tanLambda) * 180 / TMath::Pi();
 
-        Int_t sector = TMath::Nint(18.0 * alpha / (2 * TMath::Pi()) - 0.5);        
-        Int_t stack = -1;
+            lambdaDeg = TMath::ATan(tanLambda) * 180 / TMath::Pi();
         if (lambdaDeg > 30) stack = 0;
         else if (lambdaDeg > 8) stack = 1;
         else if (lambdaDeg > -8) stack = 2;
         else if (lambdaDeg > -30) stack = 3;
         else stack = 4;
-
-        *summary << indent + TAB << "{" << endl;
+        }
         
         Bool_t isTrd = false;
         
@@ -286,8 +291,12 @@ void AliAnalysisTaskMyTask::PrintTrdTrackArray(AliESDEvent *fESD, std::string in
             stack = trdTrack->GetStack();
             isTrd = true;
         }
+        else if (fExportEsdTracks == kFALSE)
+            continue;
 
         TString eventId = TString(Form("\"E%d_T%d\"", fESD->GetEventNumberInFile(), idx));
+        
+        *summary << indent + TAB << "{" << endl;
         
         *summary << indent + TAB + TAB << "\"id\": " << eventId << "," << endl;
         *summary << indent + TAB + TAB << "\"stk\": " << stack << "," << endl;
